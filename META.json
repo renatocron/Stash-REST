@@ -37,12 +37,21 @@
       },
       "runtime" : {
          "requires" : {
+            "Carp" : "0",
+            "HTTP::Request::Common" : "0",
+            "JSON" : "2.34",
+            "Moo" : "0",
+            "URI" : "0",
             "perl" : "5.008005"
          }
       },
       "test" : {
          "requires" : {
-            "Test::More" : "0.96"
+            "HTTP::Response" : "0",
+            "LWP::UserAgent" : "0",
+            "Test::Fake::HTTPD" : "0",
+            "Test::More" : "0.96",
+            "URL::Encode" : "0.03"
          }
       }
    },

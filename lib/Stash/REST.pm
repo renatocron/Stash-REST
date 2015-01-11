@@ -216,10 +216,6 @@ sub rest_reload {
     my $obj;
     if ( $res->code == 200 ) {
         $obj = eval { decode_json( $res->content ) };
-        if ($@) {
-            fail($@);
-            eval('use Data::Printer; p $res');
-        }
 
         $self->stash( $stashkey . '.get' => $obj );
     }
@@ -272,16 +268,7 @@ sub rest_reload_list {
 
     my $obj;
     if ( $res->code == 200 ) {
-        #if ( !ok( $res->is_success, 'GET ' . $item_url . ' is_success' ) ) {
-        #    eval('use Data::Printer; p $res');
-        #}
-
         $obj = eval { decode_json( $res->content ) };
-        if ($@) {
-            fail($@);
-            eval('use Data::Printer; p $res');
-        }
-
         $self->stash( $stashkey . '.list' => $obj );
     }
     elsif ( $res->code == 404 ) {
