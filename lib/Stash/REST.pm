@@ -46,11 +46,30 @@ around 'stash' => sub {
     return $stash;
 };
 
+sub _capture_args {
+    my ($self, @params) = @_;
+    my ($uri, $data, %conf);
+
+    confess 'rest_post invalid number of params' if @params < 1;
+
+    $uri = shift @params;
+    confess 'rest_post invalid uri param' unless ref $uri eq '' || ref $uri ne 'ARRAY';
+
+    if (scalar @params % 2 == 0){
+        %conf = @params;
+        $data = exists $conf{data} ? $conf{data} : [];
+    }else{
+        $data = pop @params;
+        %conf = @params;
+    }
+
+    confess 'rest_post param $data invalid' unless ref $data eq 'ARRAY';
+
+    return ($self, $uri, $data, %conf);
+}
+
 sub rest_put {
-    my $self = shift;
-    my $url  = shift;
-    my $data = pop || [];
-    my %conf = @_;
+    my ($self, $url, $data, %conf) = &_capture_args(@_);
 
     $self->rest_post(
         $url,
@@ -62,10 +81,7 @@ sub rest_put {
 }
 
 sub rest_head {
-    my $self = shift;
-    my $url  = shift;
-    my $data = pop || [];
-    my %conf = @_;
+    my ($self, $url, $data, %conf) = &_capture_args(@_);
 
     $self->rest_post(
         $url,
@@ -77,10 +93,7 @@ sub rest_head {
 }
 
 sub rest_delete {
-    my $self = shift;
-    my $url  = shift;
-    my $data = pop || [];
-    my %conf = @_;
+    my ($self, $url, $data, %conf) = &_capture_args(@_);
 
     $self->rest_post(
         $url,
@@ -92,10 +105,7 @@ sub rest_delete {
 }
 
 sub rest_get {
-    my $self = shift;
-    my $url  = shift;
-    my $data = pop || [];
-    my %conf = @_;
+    my ($self, $url, $data, %conf) = &_capture_args(@_);
 
     $self->rest_post(
         $url,
@@ -106,11 +116,9 @@ sub rest_get {
     );
 }
 
+
 sub rest_post {
-    my $self = shift;
-    my $url  = shift;
-    my $data = pop || [];
-    my %conf = @_;
+    my ($self, $url, $data, %conf) = &_capture_args(@_);
 
     $url = join '/', @$url if ref $url eq 'ARRAY';
 
@@ -144,9 +152,13 @@ sub rest_post {
     my $res = eval{$self->do_request()->($req)};
     confess "request died: $@" if $@;
 
+
+
     #is( $res->code, $code, $name . ' status code is ' . $code );
-    confess 'request success diverge expected' if ($is_fail && $res->is_success) || (!$res->is_success);
-    confess 'request code diverge expected' if $code != $res->code;
+    confess 'response expected fail and it is successed' if $is_fail && $res->is_success;
+    confess 'response expected success and it is failed' if !$is_fail && !$res->is_success;
+
+    confess 'response code [',$res->code,'] diverge expected [',$code,']' if $code != $res->code;
 
     return '' if $code == 204;
     return $res if exists $conf{method} && $conf{method} eq 'HEAD';
@@ -225,7 +237,7 @@ sub rest_reload {
         #ok( !$res->is_success, 'GET ' . $item_url . ' does not exists' );
         #is( $res->code, 404, 'GET ' . $item_url . ' status code is 404' );
 
-        delete $self->stash->{ $stashkey . '.get' };
+        # $self->stash->{ $stashkey . '.get' };
         delete $self->stash->{ $stashkey . '.id' };
         delete $self->stash->{ $stashkey . '.url' };
         delete $self->stash->{ $stashkey };

@@ -56,6 +56,17 @@
       }
    },
    "release_status" : "stable",
+   "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/renatocron/Stash-REST/issues"
+      },
+      "homepage" : "https://github.com/renatocron/Stash-REST",
+      "repository" : {
+         "type" : "git",
+         "url" : "https://github.com/renatocron/Stash-REST.git",
+         "web" : "https://github.com/renatocron/Stash-REST"
+      }
+   },
    "version" : "0.01",
    "x_contributors" : [
       "Renato CRON <renato.cron@gmail.com>"

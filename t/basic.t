@@ -161,7 +161,7 @@ $obj->rest_put(
 
 do {
     my $res = $obj->rest_head(
-        $obj->stash('easyname.url')
+        $obj->stash('easyname.url'),
     );
     is($res->headers->header('foo'), '1', 'header is present');
 };
@@ -210,5 +210,14 @@ do {
     );
     is($run, '1', '1 execution of prepare_request');
 };
+
+$obj->rest_get(
+    '/abox/1',
+    name  => 'get with 404',
+    is_fail => 1,
+    code => 404,
+    stash => 'easyname3',
+    [ query_param => 1, query_param2 => 2]
+);
 
 done_testing;
