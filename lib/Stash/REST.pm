@@ -159,7 +159,7 @@ sub rest_post {
         $self->stash( $stashkey . '.prepare_request' => $conf{prepare_request} ) if exists $conf{prepare_request};
 
         if ( $code == 201 ) {
-            $self->stash( $stashkey . '.id' => $obj->{id} );
+            $self->stash( $stashkey . '.id' => $obj->{id} ) if exists $obj->{id};
 
             my $item_url = $res->header('Location');
 
