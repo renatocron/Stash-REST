@@ -108,13 +108,19 @@ is( $obj->stash->{'bar'},  '1', 'bar is 1' );
 is( $obj->stash->{'bar2'}, '2', 'bar2 is 2' );
 is( $obj->stash->{'bar3'}, '3', 'bar3 is 3' );
 
+my $run = 0;
 $obj->rest_post(
     '/zuzus',
     name  => 'add zuzu',
     list  => 1,
     stash => 'easyname',
+    prepare_request => sub {
+        is(ref $_[0], 'HTTP::Request', 'HTTP::Request recived on prepare_request');
+        $run++;
+    },
     [ name => 'foo', ]
 );
+is($run, '2', '2 executions of prepare_request');
 
 is( ref $obj->stash->{'easyname'},      'HASH',    'stash easyname is hash' );
 is( ref $obj->stash->{'easyname.get'},  'HASH',    'stash easyname.get is hash' );
@@ -188,5 +194,21 @@ $obj->stash_ctx(
 
     }
 );
+
+
+do {
+    my $run = 0;
+    $obj->rest_post(
+        '/abos',
+        name  => 'create without list',
+        stash => 'easyname2',
+        prepare_request => sub {
+            is(ref $_[0], 'HTTP::Request', 'HTTP::Request recived on prepare_request');
+            $run++;
+        },
+        [ name => 'foo', ]
+    );
+    is($run, '1', '1 execution of prepare_request');
+};
 
 done_testing;
