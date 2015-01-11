@@ -9,7 +9,7 @@ use utf8;
 use URI;
 use JSON;
 use HTTP::Request::Common qw(GET POST DELETE HEAD);
-use Carp;
+use Carp qw/confess croak/;
 
 has 'do_request' => (
     is => 'rw',
@@ -142,13 +142,14 @@ sub rest_post {
     $req->method( $conf{method} ) if exists $conf{method};
 
     my $res = eval{$self->do_request()->($req)};
-    croak "request died: $@" if $@;
+    confess "request died: $@" if $@;
 
     #is( $res->code, $code, $name . ' status code is ' . $code );
-    croak 'request success diverge expected' if ($is_fail && $res->is_success) || (!$res->is_success);
-    croak 'request code diverge expected' if $code != $res->code;
+    confess 'request success diverge expected' if ($is_fail && $res->is_success) || (!$res->is_success);
+    confess 'request code diverge expected' if $code != $res->code;
 
     return '' if $code == 204;
+    return $res if exists $conf{method} && $conf{method} eq 'HEAD';
 
     my $obj = eval { decode_json( $res->content ) };
     #fail($@) if $@;

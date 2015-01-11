@@ -77,6 +77,8 @@ $httpd->run(
                 ];
             }
 
+        }elsif ($req->method eq 'HEAD'){
+            return [ 200, [ Foo => 1 ], [] ]
         }
 
         [ 500, [ 'Content-Type', 'application/json' ], ['{"error":"fatal"}'] ];
@@ -150,6 +152,13 @@ $obj->rest_put(
     name => 'update zuzu',
     [ name => 'AAAAAAAAA', ]
 );
+
+do {
+    my $res = $obj->rest_head(
+        $obj->stash('easyname.url')
+    );
+    is($res->headers->header('foo'), '1', 'header is present');
+};
 
 $obj->rest_reload('easyname');
 
