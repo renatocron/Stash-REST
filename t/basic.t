@@ -202,6 +202,7 @@ do {
         '/abos',
         name  => 'create without list',
         stash => 'easyname2',
+        is_fail => 0, # default is 0
         prepare_request => sub {
             is(ref $_[0], 'HTTP::Request', 'HTTP::Request recived on prepare_request');
             $run++;
@@ -212,7 +213,7 @@ do {
 };
 
 $obj->rest_get(
-    '/abox/1',
+    ['abox', '1'], # same as /abox/1
     name  => 'get with 404',
     is_fail => 1,
     code => 404,
@@ -220,4 +221,56 @@ $obj->rest_get(
     [ query_param => 1, query_param2 => 2]
 );
 
+eval{
+    $obj->rest_get(
+        '/things/deep/url/not/planed',
+        stash => 'zu',
+        data => [ you => 'can' => 'pass' => 'data with %conf too' ]
+    );
+};
+like($@, qr/response expected success and it is failed/, 'response expected success and it is failed');
+
+eval{
+    $obj->rest_get(
+        '/things',
+        stash => 'zu',
+        is_fail => 1
+    );
+};
+like($@, qr/response expected fail and it is successed/, 'response expected fail and it is successed');
+
+
+eval{
+    $obj->rest_get(
+        '/things',
+        stash => 'zu',
+        code => 230
+    );
+};
+like($@, qr|response code \[200\] diverge expected \[230\]|, 'response code [200] diverge expected [230] ');
+
+eval{
+    $obj->rest_get(
+        {'/an' => {'invalid/' => 'uri'}}
+    );
+};
+like($@, qr|rest_post invalid uri param|, 'rest_post invalid uri param');
+
+
+eval{
+    $obj->rest_get();
+};
+like($@, qr|rest_post invalid number of params|, 'rest_post invalid number of params');
+
+eval{
+    $obj->rest_post(
+        '/zuzus',
+        name  => 'add zuzu',
+        list  => 1,
+        stash => 'easyname',
+        prepare_request => 1,
+        [ name => 'foo', ]
+    );
+};
+like($@, qr|prepare_request must be a coderef|, 'prepare_request must be a coderef');
 done_testing;

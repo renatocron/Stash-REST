@@ -53,7 +53,9 @@ sub _capture_args {
     confess 'rest_post invalid number of params' if @params < 1;
 
     $uri = shift @params;
-    confess 'rest_post invalid uri param' unless ref $uri eq '' || ref $uri ne 'ARRAY';
+    confess 'rest_post invalid uri param' if ref $uri ne '' && ref $uri ne 'ARRAY';
+
+    $uri = join '/', @$uri if ref $uri eq 'ARRAY';
 
     if (scalar @params % 2 == 0){
         %conf = @params;
@@ -120,7 +122,7 @@ sub rest_get {
 sub rest_post {
     my ($self, $url, $data, %conf) = &_capture_args(@_);
 
-    $url = join '/', @$url if ref $url eq 'ARRAY';
+
 
     my $is_fail = exists $conf{is_fail} && $conf{is_fail};
 
@@ -214,9 +216,11 @@ sub rest_reload {
 
     my $prepare_request =
       exists $self->stash->{ $stashkey . '.prepare_request' }
-      && ref $self->stash->{ $stashkey . '.prepare_request' } eq 'CODE'
       ? $self->stash->{ $stashkey . '.prepare_request' }
       : undef;
+
+    confess 'prepare_request must be a coderef'
+        if $prepare_request && ref $prepare_request ne 'CODE';
 
     my $req = POST $item_url, [];
     $req->method('GET');
@@ -234,8 +238,6 @@ sub rest_reload {
     }
     elsif ( $res->code == 404 ) {
 
-        #ok( !$res->is_success, 'GET ' . $item_url . ' does not exists' );
-        #is( $res->code, 404, 'GET ' . $item_url . ' status code is 404' );
 
         # $self->stash->{ $stashkey . '.get' };
         delete $self->stash->{ $stashkey . '.id' };
@@ -266,9 +268,10 @@ sub rest_reload_list {
 
     my $prepare_request =
       exists $self->stash->{ $stashkey . '.prepare_request' }
-      && ref $self->stash->{ $stashkey . '.prepare_request' } eq 'CODE'
       ? $self->stash->{ $stashkey . '.prepare_request' }
       : undef;
+    confess 'prepare_request must be a coderef'
+        if $prepare_request && ref $prepare_request ne 'CODE';
 
     my $req = POST $item_url, [];
     $req->method('GET');
@@ -283,13 +286,6 @@ sub rest_reload_list {
     if ( $res->code == 200 ) {
         $obj = eval { decode_json( $res->content ) };
         $self->stash( $stashkey . '.list' => $obj );
-    }
-    elsif ( $res->code == 404 ) {
-
-        delete $self->stash->{ $stashkey . '.list' };
-        delete $self->stash->{ $stashkey . '.list-url' };
-        delete $self->stash->{ $stashkey };
-
     }
     else {
         confess 'response code ' . $res->code . ' is not valid for rest_reload';
