@@ -9,7 +9,7 @@ use utf8;
 use URI;
 use JSON;
 use HTTP::Request::Common qw(GET POST DELETE HEAD);
-use Carp qw/confess croak/;
+use Carp qw/confess/;
 
 has 'do_request' => (
     is => 'rw',
@@ -169,7 +169,7 @@ sub rest_post {
 
                 $self->rest_reload($stashkey);
             }else{
-                croak 'requests with response code 201 should contain header Location';
+                confess 'requests with response code 201 should contain header Location';
             }
         }
     }
@@ -198,7 +198,7 @@ sub rest_reload {
     my @headers = (@{$self->fixed_headers()}, @{$conf{headers}||[]} );
     my $item_url = $self->stash->{ $stashkey . '.url' };
 
-    croak "can't stash $stashkey.url is not valid" unless $item_url;
+    confess "can't stash $stashkey.url is not valid" unless $item_url;
 
     my $prepare_request =
       exists $self->stash->{ $stashkey . '.prepare_request' }
@@ -212,7 +212,7 @@ sub rest_reload {
 
     my $res = $self->do_request()->($req);
 
-    croak 'request code diverge expected' if $code != $res->code;
+    confess 'request code diverge expected' if $code != $res->code;
 
     my $obj;
     if ( $res->code == 200 ) {
@@ -232,7 +232,7 @@ sub rest_reload {
 
     }
     else {
-        croak 'response code ' . $res->code . ' is not valid for rest_reload';
+        confess 'response code ' . $res->code . ' is not valid for rest_reload';
     }
 
     return $obj;
@@ -250,7 +250,7 @@ sub rest_reload_list {
     my @headers = (@{$self->fixed_headers()}, @{$conf{headers}||[]} );
     my $item_url = $self->stash->{ $stashkey . '.list-url' };
 
-    croak "can't stash $stashkey.list-url is not valid" unless $item_url;
+    confess "can't stash $stashkey.list-url is not valid" unless $item_url;
 
     my $prepare_request =
       exists $self->stash->{ $stashkey . '.prepare_request' }
@@ -265,7 +265,7 @@ sub rest_reload_list {
 
     my $res = $self->do_request()->($req);
 
-    croak 'request code diverge expected' if $code != $res->code;
+    confess 'request code diverge expected' if $code != $res->code;
 
     my $obj;
     if ( $res->code == 200 ) {
@@ -280,7 +280,7 @@ sub rest_reload_list {
 
     }
     else {
-        croak 'response code ' . $res->code . ' is not valid for rest_reload';
+        confess 'response code ' . $res->code . ' is not valid for rest_reload';
     }
 
     return $obj;
