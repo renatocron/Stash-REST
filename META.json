@@ -38,6 +38,7 @@
       "runtime" : {
          "requires" : {
             "Carp" : "0",
+            "Class::Trigger" : "0.14",
             "HTTP::Request::Common" : "0",
             "JSON" : "2.34",
             "Moo" : "0",

@@ -43,42 +43,6 @@ Stash::REST - Add Requests into stash. Then, Extends with Class::Trigger!
     );
     is($run, '2', '2 executions of prepare_request');
 
-    $obj->stash->{'easyname'} # parsed response for POST /zuzus
-    $obj->stash->{'easyname.id'} # HashRef->{id} if exists, from POST response.
-    $obj->stash->{'easyname.get'} # parsed response of GET /zuzus/1 (from Location)
-
-    if list => 1 is passed:
-    $obj->stash->{'easyname.list'} # parsed response for GET '/zuzus'
-    $obj->stash->{'easyname.url'} # 'zuzus/1'
-    $obj->stash->{'easyname.list-url'} # '/zuzus'
-
-
-    # this
-    $obj->stash_ctx(
-        'easyname.get',
-        sub {
-            my ($me) = @_;
-        }
-    );
-
-    # equivalent to
-    my $me = $c->stash->{'easyname.get'};
-
-
-    # can be useful for testing/context isolation
-    $obj->stash_ctx(
-        'easyname.list',
-        sub {
-            my ($me) = @_;
-
-            ok( $me = delete $me->{zuzus}, 'zuzu list exists' );
-
-            is( @$me, 1, '1 zuzu' );
-
-            is( $me->[0]{name}, 'foo', 'listing ok' );
-        }
-    );
-
     $obj->rest_put(
         $obj->stash('easyname.url'),
         name => 'update zuzu',
@@ -96,8 +60,6 @@ Stash::REST - Add Requests into stash. Then, Extends with Class::Trigger!
         }
     );
 
-    $obj->rest_delete( $obj->stash('easyname.url') );
-
     # reload expecting a different code.
     $obj->rest_reload( 'easyname', code => 404 );
 
@@ -109,9 +71,47 @@ Stash::REST - Add Requests into stash. Then, Extends with Class::Trigger!
     );
     is($res->headers->header('foo'), '1', 'header is present');
 
+    $obj->stash->{'easyname'} # parsed response for POST /zuzus
+    $obj->stash->{'easyname.id'} # HashRef->{id} if exists, from POST response.
+    $obj->stash->{'easyname.get'} # parsed response of GET /zuzus/1 (from Location)
+    $obj->stash->{'easyname.url'} # 'zuzus/1'
+
+    if list => 1 is passed:
+    $obj->stash->{'easyname.list'} # parsed response for GET '/zuzus'
+    $obj->stash->{'easyname.list-url'} # '/zuzus'
+
+
+    # this
+    $obj->stash_ctx(
+        'easyname.get',
+        sub {
+            my ($me) = @_;
+        }
+    );
+
+    # equivalent to
+    my $me = $c->stash->{'easyname.get'};
+
+    # can be useful for testing/context isolation
+    $obj->stash_ctx(
+        'easyname.list',
+        sub {
+            my ($me) = @_;
+
+            ok( $me = delete $me->{zuzus}, 'zuzu list exists' );
+
+            is( @$me, 1, '1 zuzu' );
+
+            is( $me->[0]{name}, 'foo', 'listing ok' );
+        }
+    );
+
+
+    $obj->rest_delete( $obj->stash('easyname.url') );
+
 # DESCRIPTION
 
-Stash::REST helps you use HTTP::Request::Common to create requests and put responses into a stash for futher user.
+Stash::REST helps you use HTTP::Request::Common to create requests and put responses into a stash for further user.
 
 The main objective is to encapsulate the most used HTTP methods and expected response codes for future
 extensions and analysis by other modules, using the callbacks [Class::Trigger](https://metacpan.org/pod/Class::Trigger).
@@ -176,7 +176,7 @@ This is a private method. It parse and validate params for rest\_post and above 
 
         $self, # (required) self object
         $url,  # (required) a string. If ARRAY $url will return a join '/', @$url
-        %conf, # (optional) configuration hash (AKA list). Odd number will broke cause problems.
+        %conf, # (optional) configuration hash (AKA list). Odd number will cause problems.
         $data  # (optional) ArrayRef, send on body as application/x-www-form-urlencoded data
 
     # $data can be also sent as $conf{data} = []
@@ -199,14 +199,15 @@ This test if $res->code equivalent to expected. Die with confess if not archived
 
 #### stash => 'foobar'
 
-Load parsed response on `stash-`{foobar}> and some others fields
+Load parsed response on ` $obj-`stash->{foobar} > and some others fields
 
-`stash-`{foobar.id}> if response code is 201 and parsed response contains ->{id}
-`stash-`{foobar.url}> if response code is 201 and header contains Location (confess if missed)
+` $obj-`stash->{foobar.id} > if response code is 201 and parsed response contains ->{id}
+` $obj-`stash->{foobar.url} > if response code is 201 and header contains Location (confess if missed)
 
 #### list => 1,
 
-This is if
+If true, Location header will be looked and a GET on Location will occur and parsed data will be stashed on
+` $obj-`stash->{foobar.list} > and list-url on ` $obj-`stash->{foobar.list-url} >
 
 ## stash\_ctx
 
@@ -220,7 +221,26 @@ This is if
 
     Get an stash-name and run a CodeRef with the stash as first @_
 
-## $t->stash
+## rest\_reload
+
+Reload the GET easyname.url and put on stash.
+
+    $obj->rest_reload( 'easyname' );
+
+    # reload expecting a different code.
+    $obj->rest_reload( 'easyname', code => 404 );
+
+When response is 404, some stash{easyname} is cleared.
+
+## rest\_reload\_list
+
+Reload the GET easyname.list-url and put on stash.
+
+    $obj->rest_reload_list('easyname');
+
+This response code must be 200 OK.
+
+## stash
 
 Copy from old Catalyst.pm, but $t->stash('foo') = $t->stash->{'foo'}
 
@@ -235,7 +255,7 @@ passing arguments. Unlike catalyst, it's never cleared, so, it lasts until objec
 # Tests Coverage
 
 I'm always trying to improve those numbers.
-Improve branch number is a very time-consuming task. There is a room for test all checkings and defaults on tests.
+Improve branch number is a very time-consuming task. There is a room for test all checking and defaults on tests.
 
     ---------------------------- ------ ------ ------ ------ ------ ------ ------
     File                           stmt   bran   cond    sub    pod   time  total
@@ -243,6 +263,27 @@ Improve branch number is a very time-consuming task. There is a room for test al
     blib/lib/Stash/REST.pm         94.9   73.1   81.4  100.0    0.0  100.0   84.6
     Total                          94.9   73.1   81.4  100.0    0.0  100.0   84.6
     ---------------------------- ------ ------ ------ ------ ------ ------ ------
+
+# Class::Trigger names
+
+Updated @ Stash-REST 0.01
+
+    $ grep  '$self->call_trigger' lib/Stash/REST.pm  | perl -ne '$_ =~ s/^\s+//; print' | sort | uniq
+
+    Trigger / variables:
+
+    $self->call_trigger('before_rest_delete', \$url, \$data, \%conf);
+    $self->call_trigger('before_rest_get', \$url, \$data, \%conf);
+    $self->call_trigger('before_rest_head', \$url, \$data, \%conf);
+    $self->call_trigger('before_rest_post', \$url, \$data, \%conf);
+    $self->call_trigger('before_rest_put', \$url, \$data, \%conf);
+    $self->call_trigger('item_loaded', $stashkey);
+    $self->call_trigger('list_loaded', $stashkey);
+    $self->call_trigger('process_request', \$req);
+    $self->call_trigger('process_response', \$req, \$res);
+    $self->call_trigger('response_decoded', \$req, \$res, \$obj);
+    $self->call_trigger('stash_added', $stashkey);
+    $self->call_trigger('stash_removed', $stashkey);
 
 # AUTHOR
 
