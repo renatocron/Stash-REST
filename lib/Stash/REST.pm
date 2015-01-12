@@ -616,6 +616,29 @@ Improve branch number is a very time-consuming task. There is a room for test al
     Total                          94.9   73.1   81.4  100.0    0.0  100.0   84.6
     ---------------------------- ------ ------ ------ ------ ------ ------ ------
 
+=head1 Class::Trigger names
+
+
+Updated @ Stash-REST 0.01
+
+    $ grep  '$self->call_trigger' lib/Stash/REST.pm  | perl -ne '$_ =~ s/^\s+//; print' | sort | uniq
+
+    Trigger / variables:
+
+    $self->call_trigger('before_rest_delete', \$url, \$data, \%conf);
+    $self->call_trigger('before_rest_get', \$url, \$data, \%conf);
+    $self->call_trigger('before_rest_head', \$url, \$data, \%conf);
+    $self->call_trigger('before_rest_post', \$url, \$data, \%conf);
+    $self->call_trigger('before_rest_put', \$url, \$data, \%conf);
+    $self->call_trigger('item_loaded', $stashkey);
+    $self->call_trigger('list_loaded', $stashkey);
+    $self->call_trigger('process_request', \$req);
+    $self->call_trigger('process_response', \$req, \$res);
+    $self->call_trigger('response_decoded', \$req, \$res, \$obj);
+    $self->call_trigger('stash_added', $stashkey);
+    $self->call_trigger('stash_removed', $stashkey);
+
+
 =head1 AUTHOR
 
 Renato CRON E<lt>rentocron@cpan.orgE<gt>
