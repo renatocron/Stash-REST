@@ -248,7 +248,7 @@ sub rest_reload {
     confess 'prepare_request must be a coderef'
         if $prepare_request && ref $prepare_request ne 'CODE';
 
-    my $req = POST $item_url, [];
+    my $req = POST $item_url, @headers, [];
     $req->method('GET');
     $prepare_request->($req) if $prepare_request;
 
@@ -305,7 +305,7 @@ sub rest_reload_list {
     confess 'prepare_request must be a coderef'
         if $prepare_request && ref $prepare_request ne 'CODE';
 
-    my $req = POST $item_url, [];
+    my $req = POST $item_url, @headers, [];
     $req->method('GET');
     $prepare_request->($req) if $prepare_request;
 

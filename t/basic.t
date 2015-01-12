@@ -273,4 +273,18 @@ eval{
     );
 };
 like($@, qr|prepare_request must be a coderef|, 'prepare_request must be a coderef');
+
+
+$obj->fixed_headers([ a_header => 12 ]);
+$obj->rest_post(
+    '/abob',
+    name  => 'add abob',
+    list  => 1,
+    stash => 'easyname',
+    prepare_request => sub {
+        is($_[0]->headers->header('a_header'), '12', 'the fixed headers are sent');
+    },
+    [ name => 'foo', ]
+);
+
 done_testing;
