@@ -2,5 +2,9 @@ Revision history for Stash-REST
 
 {{$NEXT}}
 
+0.03  2015-01-12 19:40:52 BRST
+        - Fixed missing @headers on rest_reload and rest_reload_list
+        - Test added for that not occur again.
+
 0.02  2015-01-12 18:49:36 BRST
         - Initial release
