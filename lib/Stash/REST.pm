@@ -11,6 +11,9 @@ use JSON;
 use HTTP::Request::Common qw(GET POST DELETE HEAD);
 use Carp qw/confess/;
 
+use Class::Trigger;
+
+
 has 'do_request' => (
     is => 'rw',
     isa => sub {die "$_[0] is not a CodeRef" unless ref $_[0] eq 'CODE'},
@@ -67,13 +70,15 @@ sub _capture_args {
 
     confess 'rest_post param $data invalid' unless ref $data eq 'ARRAY';
 
+
     return ($self, $uri, $data, %conf);
 }
 
 sub rest_put {
     my ($self, $url, $data, %conf) = &_capture_args(@_);
 
-    $self->rest_post(
+    $self->call_trigger('before_rest_put', \$url, \$data, \%conf);
+    $self->_rest_request(
         $url,
         code => ( exists $conf{is_fail} ? 400 : 202 ),
         %conf,
@@ -85,7 +90,8 @@ sub rest_put {
 sub rest_head {
     my ($self, $url, $data, %conf) = &_capture_args(@_);
 
-    $self->rest_post(
+    $self->call_trigger('before_rest_head', \$url, \$data, \%conf);
+    $self->_rest_request(
         $url,
         code => 200,
         %conf,
@@ -97,7 +103,8 @@ sub rest_head {
 sub rest_delete {
     my ($self, $url, $data, %conf) = &_capture_args(@_);
 
-    $self->rest_post(
+    $self->call_trigger('before_rest_delete', \$url, \$data, \%conf);
+    $self->_rest_request(
         $url,
         code => 204,
         %conf,
@@ -109,7 +116,8 @@ sub rest_delete {
 sub rest_get {
     my ($self, $url, $data, %conf) = &_capture_args(@_);
 
-    $self->rest_post(
+    $self->call_trigger('before_rest_get', \$url, \$data, \%conf);
+    $self->_rest_request(
         $url,
         code => 200,
         %conf,
@@ -118,18 +126,25 @@ sub rest_get {
     );
 }
 
-
 sub rest_post {
     my ($self, $url, $data, %conf) = &_capture_args(@_);
+    $self->call_trigger('before_rest_post', \$url, \$data, \%conf);
 
+    $self->_rest_request(
+        $url,
+        %conf,
+        method => 'POST',
+        $data
+    );
+}
 
+sub _rest_request {
+    my ($self, $url, $data, %conf) = &_capture_args(@_);
 
     my $is_fail = exists $conf{is_fail} && $conf{is_fail};
 
     my $code = $conf{code};
     $code ||= $is_fail ? 400 : 201;
-
-
 
     my $stashkey = exists $conf{stash} ? $conf{stash} : undef;
 
@@ -149,11 +164,14 @@ sub rest_post {
           Content => [ @$data, %{ $conf{files} } ];
     }
 
+    $self->call_trigger('process_request', \$req);
+
     $req->method( $conf{method} ) if exists $conf{method};
 
     my $res = eval{$self->do_request()->($req)};
     confess "request died: $@" if $@;
 
+    $self->call_trigger('process_response', \$req, \$res);
 
 
     #is( $res->code, $code, $name . ' status code is ' . $code );
@@ -167,6 +185,8 @@ sub rest_post {
 
     my $obj = eval { decode_json( $res->content ) };
     #fail($@) if $@;
+
+    $self->call_trigger('response_decoded', \$req, \$res, \$obj);
 
     if ($stashkey) {
         $self->stash->{$stashkey} = $obj;
@@ -182,9 +202,13 @@ sub rest_post {
                 $self->stash->{$stashkey . '.url'} = $item_url ;
 
                 $self->rest_reload($stashkey);
+
+                $self->call_trigger('item_loaded', $stashkey);
             }else{
                 confess 'requests with response code 201 should contain header Location';
             }
+
+            $self->call_trigger('stash_added', $stashkey);
         }
     }
 
@@ -193,6 +217,8 @@ sub rest_post {
         $self->stash( $stashkey . '.list-url' => $url );
 
         $self->rest_reload_list($stashkey);
+
+        $self->call_trigger('list_loaded', $stashkey);
 
     }
 
@@ -226,7 +252,10 @@ sub rest_reload {
     $req->method('GET');
     $prepare_request->($req) if $prepare_request;
 
+    $self->call_trigger('process_request', \$req);
     my $res = $self->do_request()->($req);
+
+    $self->call_trigger('process_response', \$req, \$res);
 
     confess 'request code diverge expected' if $code != $res->code;
 
@@ -234,10 +263,13 @@ sub rest_reload {
     if ( $res->code == 200 ) {
         $obj = eval { decode_json( $res->content ) };
 
+        $self->call_trigger('response_decoded', \$req, \$res, \$obj);
+
         $self->stash( $stashkey . '.get' => $obj );
     }
     elsif ( $res->code == 404 ) {
 
+        $self->call_trigger('stash_removed', $stashkey);
 
         # $self->stash->{ $stashkey . '.get' };
         delete $self->stash->{ $stashkey . '.id' };
@@ -277,14 +309,20 @@ sub rest_reload_list {
     $req->method('GET');
     $prepare_request->($req) if $prepare_request;
 
+    $self->call_trigger('process_request', \$req);
 
     my $res = $self->do_request()->($req);
+
+    $self->call_trigger('process_response', \$req, \$res);
 
     confess 'request code diverge expected' if $code != $res->code;
 
     my $obj;
     if ( $res->code == 200 ) {
         $obj = eval { decode_json( $res->content ) };
+
+        $self->call_trigger('response_decoded', \$req, \$res, \$obj);
+
         $self->stash( $stashkey . '.list' => $obj );
     }
     else {
@@ -352,42 +390,6 @@ Stash::REST - Add Requests into stash. Then, Extends with Class::Trigger!
     );
     is($run, '2', '2 executions of prepare_request');
 
-    $obj->stash->{'easyname'} # parsed response for POST /zuzus
-    $obj->stash->{'easyname.id'} # HashRef->{id} if exists, from POST response.
-    $obj->stash->{'easyname.get'} # parsed response of GET /zuzus/1 (from Location)
-
-    if list => 1 is passed:
-    $obj->stash->{'easyname.list'} # parsed response for GET '/zuzus'
-    $obj->stash->{'easyname.url'} # 'zuzus/1'
-    $obj->stash->{'easyname.list-url'} # '/zuzus'
-
-
-    # this
-    $obj->stash_ctx(
-        'easyname.get',
-        sub {
-            my ($me) = @_;
-        }
-    );
-
-    # equivalent to
-    my $me = $c->stash->{'easyname.get'};
-
-
-    # can be useful for testing/context isolation
-    $obj->stash_ctx(
-        'easyname.list',
-        sub {
-            my ($me) = @_;
-
-            ok( $me = delete $me->{zuzus}, 'zuzu list exists' );
-
-            is( @$me, 1, '1 zuzu' );
-
-            is( $me->[0]{name}, 'foo', 'listing ok' );
-        }
-    );
-
     $obj->rest_put(
         $obj->stash('easyname.url'),
         name => 'update zuzu',
@@ -405,8 +407,6 @@ Stash::REST - Add Requests into stash. Then, Extends with Class::Trigger!
         }
     );
 
-    $obj->rest_delete( $obj->stash('easyname.url') );
-
     # reload expecting a different code.
     $obj->rest_reload( 'easyname', code => 404 );
 
@@ -418,10 +418,47 @@ Stash::REST - Add Requests into stash. Then, Extends with Class::Trigger!
     );
     is($res->headers->header('foo'), '1', 'header is present');
 
+    $obj->stash->{'easyname'} # parsed response for POST /zuzus
+    $obj->stash->{'easyname.id'} # HashRef->{id} if exists, from POST response.
+    $obj->stash->{'easyname.get'} # parsed response of GET /zuzus/1 (from Location)
+    $obj->stash->{'easyname.url'} # 'zuzus/1'
+
+    if list => 1 is passed:
+    $obj->stash->{'easyname.list'} # parsed response for GET '/zuzus'
+    $obj->stash->{'easyname.list-url'} # '/zuzus'
+
+
+    # this
+    $obj->stash_ctx(
+        'easyname.get',
+        sub {
+            my ($me) = @_;
+        }
+    );
+
+    # equivalent to
+    my $me = $c->stash->{'easyname.get'};
+
+    # can be useful for testing/context isolation
+    $obj->stash_ctx(
+        'easyname.list',
+        sub {
+            my ($me) = @_;
+
+            ok( $me = delete $me->{zuzus}, 'zuzu list exists' );
+
+            is( @$me, 1, '1 zuzu' );
+
+            is( $me->[0]{name}, 'foo', 'listing ok' );
+        }
+    );
+
+
+    $obj->rest_delete( $obj->stash('easyname.url') );
 
 =head1 DESCRIPTION
 
-Stash::REST helps you use HTTP::Request::Common to create requests and put responses into a stash for futher user.
+Stash::REST helps you use HTTP::Request::Common to create requests and put responses into a stash for further user.
 
 The main objective is to encapsulate the most used HTTP methods and expected response codes for future
 extensions and analysis by other modules, using the callbacks L<Class::Trigger>.
@@ -487,7 +524,7 @@ This is a private method. It parse and validate params for rest_post and above m
 
         $self, # (required) self object
         $url,  # (required) a string. If ARRAY $url will return a join '/', @$url
-        %conf, # (optional) configuration hash (AKA list). Odd number will broke cause problems.
+        %conf, # (optional) configuration hash (AKA list). Odd number will cause problems.
         $data  # (optional) ArrayRef, send on body as application/x-www-form-urlencoded data
 
     # $data can be also sent as $conf{data} = []
@@ -512,19 +549,16 @@ This test if $res->code equivalent to expected. Die with confess if not archived
 
 =head4 stash => 'foobar'
 
-Load parsed response on C<stash->{foobar}> and some others fields
+Load parsed response on C< $obj->stash->{foobar} > and some others fields
 
-C<stash->{foobar.id}> if response code is 201 and parsed response contains ->{id}
-C<stash->{foobar.url}> if response code is 201 and header contains Location (confess if missed)
+C< $obj->stash->{foobar.id} > if response code is 201 and parsed response contains ->{id}
+C< $obj->stash->{foobar.url} > if response code is 201 and header contains Location (confess if missed)
 
 
 =head4 list => 1,
 
-
-
-This is if
-
-
+If true, Location header will be looked and a GET on Location will occur and parsed data will be stashed on
+C< $obj->stash->{foobar.list} > and list-url on C< $obj->stash->{foobar.list-url} >
 
 =head2 stash_ctx
 
@@ -538,8 +572,26 @@ This is if
 
     Get an stash-name and run a CodeRef with the stash as first @_
 
+=head2 rest_reload
 
-=head2 $t->stash
+Reload the GET easyname.url and put on stash.
+
+    $obj->rest_reload( 'easyname' );
+
+    # reload expecting a different code.
+    $obj->rest_reload( 'easyname', code => 404 );
+
+When response is 404, some stash{easyname} is cleared.
+
+=head2 rest_reload_list
+
+Reload the GET easyname.list-url and put on stash.
+
+    $obj->rest_reload_list('easyname');
+
+This response code must be 200 OK.
+
+=head2 stash
 
 Copy from old Catalyst.pm, but $t->stash('foo') = $t->stash->{'foo'}
 
@@ -554,7 +606,7 @@ passing arguments. Unlike catalyst, it's never cleared, so, it lasts until objec
 =head1 Tests Coverage
 
 I'm always trying to improve those numbers.
-Improve branch number is a very time-consuming task. There is a room for test all checkings and defaults on tests.
+Improve branch number is a very time-consuming task. There is a room for test all checking and defaults on tests.
 
 
     ---------------------------- ------ ------ ------ ------ ------ ------ ------

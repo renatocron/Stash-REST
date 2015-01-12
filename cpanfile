@@ -5,6 +5,7 @@ requires 'URI';
 requires 'JSON', '2.34';
 requires 'HTTP::Request::Common';
 requires 'Carp';
+requires 'Class::Trigger', '0.14';
 
 on test => sub {
 
