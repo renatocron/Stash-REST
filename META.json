@@ -1,5 +1,5 @@
 {
-   "abstract" : "Blah blah blah",
+   "abstract" : "Add Requests into stash. Then, Extends with Class::Trigger!",
    "author" : [
       "Renato CRON <rentocron@cpan.org>"
    ],
