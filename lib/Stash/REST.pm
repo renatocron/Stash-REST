@@ -1,7 +1,7 @@
 package Stash::REST;
 use strict;
 use 5.008_005;
-our $VERSION = '0.032';
+our $VERSION = '0.04';
 
 use warnings;
 use utf8;
@@ -656,6 +656,29 @@ Improve branch number is a very time-consuming task. There is a room for test al
 
 =head1 Class::Trigger names
 
+Updated @ Stash-REST 0.04
+
+    $ grep  '$self->call_trigger' lib/Stash/REST.pm  | perl -ne '$_ =~ s/^\s+//; $_ =~ s/self-/self0_04-/; print' | sort | uniq
+
+    Trigger / variables:
+
+    $self0_04->call_trigger('after_stash_ctx', $staname, \@ret);
+    $self0_04->call_trigger('before_rest_delete', \$url, \$data, \%conf);
+    $self0_04->call_trigger('before_rest_get', \$url, \$data, \%conf);
+    $self0_04->call_trigger('before_rest_head', \$url, \$data, \%conf);
+    $self0_04->call_trigger('before_rest_post', \$url, \$data, \%conf);
+    $self0_04->call_trigger('before_rest_put', \$url, \$data, \%conf);
+    $self0_04->call_trigger('before_stash_ctx', $staname);
+    $self0_04->call_trigger('item_loaded', $stashkey, \%conf);
+    $self0_04->call_trigger('list_loaded', $stashkey, \%conf);
+    $self0_04->call_trigger('process_request', \$req, \%conf);
+    $self0_04->call_trigger('process_response', \$req, \$res, \%conf);
+    $self0_04->call_trigger('process_response_success', \$req, \$res, \%conf);
+    $self0_04->call_trigger('response_decoded', \$req, \$res, \$obj, \%conf);
+    $self0_04->call_trigger('stash_added', $stashkey, \%conf);
+    $self0_04->call_trigger('stash_removed', $stashkey, \%conf);
+
+
 Updated @ Stash-REST 0.03
 
     $ grep  '$self->call_trigger' lib/Stash/REST.pm  | perl -ne '$_ =~ s/^\s+//; $_ =~ s/self-/self0_03-/; print' | sort | uniq
@@ -677,25 +700,6 @@ Updated @ Stash-REST 0.03
     $self0_03->call_trigger('stash_added', $stashkey, \%conf);
     $self0_03->call_trigger('stash_removed', $stashkey, \%conf);
 
-
-Updated @ Stash-REST 0.02
-
-    $ grep  '$self->call_trigger' lib/Stash/REST.pm  | perl -ne '$_ =~ s/^\s+//; $_ =~ s/self-/self0_02-/; print' | sort | uniq
-
-    Trigger / variables:
-
-    $self_0_02->call_trigger('before_rest_delete', \$url, \$data, \%conf);
-    $self_0_02->call_trigger('before_rest_get', \$url, \$data, \%conf);
-    $self_0_02->call_trigger('before_rest_head', \$url, \$data, \%conf);
-    $self_0_02->call_trigger('before_rest_post', \$url, \$data, \%conf);
-    $self_0_02->call_trigger('before_rest_put', \$url, \$data, \%conf);
-    $self_0_02->call_trigger('item_loaded', $stashkey);
-    $self_0_02->call_trigger('list_loaded', $stashkey);
-    $self_0_02->call_trigger('process_request', \$req);
-    $self_0_02->call_trigger('process_response', \$req, \$res);
-    $self_0_02->call_trigger('response_decoded', \$req, \$res, \$obj);
-    $self_0_02->call_trigger('stash_added', $stashkey);
-    $self_0_02->call_trigger('stash_removed', $stashkey);
 
 
 =head1 AUTHOR
