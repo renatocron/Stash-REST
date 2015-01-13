@@ -2,6 +2,9 @@ Revision history for Stash-REST
 
 {{$NEXT}}
 
+0.04  2015-01-13 09:20:36 BRST
+        - decode_response added on ->new() and it's required
+
 0.03  2015-01-12 19:40:52 BRST
         - Fixed missing @headers on rest_reload and rest_reload_list
         - Test added for that not occur again.
