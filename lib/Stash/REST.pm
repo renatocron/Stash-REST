@@ -1,24 +1,31 @@
 package Stash::REST;
 use strict;
 use 5.008_005;
-our $VERSION = '0.03';
+our $VERSION = '0.032';
 
-use Moo;
 use warnings;
 use utf8;
 use URI;
-use JSON;
 use HTTP::Request::Common qw(GET POST DELETE HEAD);
 use Carp qw/confess/;
 
-use Class::Trigger;
+use Moo;
+use namespace::clean;
 
+use Class::Trigger;
 
 has 'do_request' => (
     is => 'rw',
     isa => sub {die "$_[0] is not a CodeRef" unless ref $_[0] eq 'CODE'},
     required => 1
 );
+
+has 'decode_response' => (
+    is => 'rw',
+    isa => sub {die "$_[0] is not a CodeRef" unless ref $_[0] eq 'CODE'},
+    required => 1
+);
+
 has 'stash' => (
     is => 'rw',
     isa => sub {die "$_[0] is not a HashRef" unless ref $_[0] eq 'HASH'},
@@ -145,6 +152,7 @@ sub _rest_request {
 
     my $code = $conf{code};
     $code ||= $is_fail ? 400 : 201;
+    $conf{code} = $code;
 
     my $stashkey = exists $conf{stash} ? $conf{stash} : undef;
 
@@ -173,18 +181,19 @@ sub _rest_request {
 
     $self->call_trigger('process_response', \$req, \$res, \%conf);
 
-
     #is( $res->code, $code, $name . ' status code is ' . $code );
     confess 'response expected fail and it is successed' if $is_fail && $res->is_success;
     confess 'response expected success and it is failed' if !$is_fail && !$res->is_success;
 
     confess 'response code [',$res->code,'] diverge expected [',$code,']' if $code != $res->code;
 
+    $self->call_trigger('process_response_success', \$req, \$res, \%conf);
+
     return '' if $code == 204;
     return $res if exists $conf{method} && $conf{method} eq 'HEAD';
 
-    my $obj = eval { decode_json( $res->content ) };
-    #fail($@) if $@;
+    my $obj = eval { $self->decode_response()->( $res ) };
+    confess("decode_response failed: $@") if $@;
 
     $self->call_trigger('response_decoded', \$req, \$res, \$obj, \%conf);
 
@@ -194,7 +203,7 @@ sub _rest_request {
         $self->stash( $stashkey . '.prepare_request' => $conf{prepare_request} ) if exists $conf{prepare_request};
 
         if ( $code == 201 ) {
-            $self->stash( $stashkey . '.id' => $obj->{id} ) if exists $obj->{id};
+            $self->stash( $stashkey . '.id' => $obj->{id} ) if ref $obj eq 'HASH' && exists $obj->{id};
 
             my $item_url = $res->header('Location');
 
@@ -233,6 +242,7 @@ sub rest_reload {
     my %conf = @_;
 
     my $code = exists $conf{code} ? $conf{code} : 200;
+    $conf{code} = $code;
 
 
     my @headers = (@{$self->fixed_headers()}, @{$conf{headers}||[]} );
@@ -259,9 +269,12 @@ sub rest_reload {
 
     confess 'request code diverge expected' if $code != $res->code;
 
+    $self->call_trigger('process_response_success', \$req, \$res, \%conf);
+
     my $obj;
     if ( $res->code == 200 ) {
-        $obj = eval { decode_json( $res->content ) };
+        my $obj = eval { $self->decode_response()->( $res ) };
+        confess("decode_response failed: $@") if $@;
 
         $self->call_trigger('response_decoded', \$req, \$res, \$obj, \%conf);
 
@@ -292,6 +305,7 @@ sub rest_reload_list {
     my %conf = @_;
 
     my $code = exists $conf{code} ? $conf{code} : 200;
+    $conf{code} = $code;
 
     my @headers = (@{$self->fixed_headers()}, @{$conf{headers}||[]} );
     my $item_url = $self->stash->{ $stashkey . '.list-url' };
@@ -317,9 +331,12 @@ sub rest_reload_list {
 
     confess 'request code diverge expected' if $code != $res->code;
 
+    $self->call_trigger('process_response_success', \$req, \$res, \%conf);
+
     my $obj;
     if ( $res->code == 200 ) {
-        $obj = eval { decode_json( $res->content ) };
+        my $obj = eval { $self->decode_response()->( $res ) };
+        confess("decode_response failed: $@") if $@;
 
         $self->call_trigger('response_decoded', \$req, \$res, \$obj, \%conf);
 
@@ -357,6 +374,7 @@ Stash::REST - Add Requests into stash. Then, Extends with Class::Trigger!
 =head1 SYNOPSIS
 
     use Stash::REST;
+    use JSON;
 
     $obj = Stash::REST->new(
         do_request => sub {
@@ -372,6 +390,10 @@ Stash::REST - Add Requests into stash. Then, Extends with Class::Trigger!
             return LWP::UserAgent->new->request($req);
 
         },
+        decode_response => sub {
+            my $res = shift;
+            return decode_json($res->content);
+        }
     );
 
     # you can write/read stash anytime
@@ -470,6 +492,17 @@ extensions and analysis by other modules, using the callbacks L<Class::Trigger>.
 
 
 =head1 METHODS
+
+=head2 new
+
+    Stash::REST->new(
+        do_request => sub {
+            ...
+        },
+        decode_response => sub {
+            ...
+        }
+    );
 
 =head2 rest_get
 

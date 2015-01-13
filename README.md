@@ -5,6 +5,7 @@ Stash::REST - Add Requests into stash. Then, Extends with Class::Trigger!
 # SYNOPSIS
 
     use Stash::REST;
+    use JSON;
 
     $obj = Stash::REST->new(
         do_request => sub {
@@ -20,6 +21,10 @@ Stash::REST - Add Requests into stash. Then, Extends with Class::Trigger!
             return LWP::UserAgent->new->request($req);
 
         },
+        decode_response => sub {
+            my $res = shift;
+            return decode_json($res->content);
+        }
     );
 
     # you can write/read stash anytime

@@ -48,7 +48,7 @@ $httpd->run(
                 ];
             }
             else {
-                return [ 404, [], [] ] unless exists $fakedatabase->{ $pp[0] }{ $pp[1] };
+                return [ 404, [], ['{"error":"not found"}'] ] unless exists $fakedatabase->{ $pp[0] }{ $pp[1] };
                 return [
                     200,
                     [ 'Content-Type', 'application/json' ],
@@ -92,6 +92,10 @@ my $obj = Stash::REST->new(
         $req->uri( $req->uri->abs( $httpd->endpoint ) );
 
         LWP::UserAgent->new->request($req);
+    },
+    decode_response => sub {
+        my $res = shift;
+        return decode_json($res->content);
     },
 );
 is( ref $obj, 'Stash::REST', 'obj is Stash::REST' );

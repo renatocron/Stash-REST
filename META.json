@@ -40,15 +40,16 @@
             "Carp" : "0",
             "Class::Trigger" : "0.14",
             "HTTP::Request::Common" : "0",
-            "JSON" : "2.34",
             "Moo" : "0",
             "URI" : "0",
+            "namespace::clean" : "0",
             "perl" : "5.008005"
          }
       },
       "test" : {
          "requires" : {
             "HTTP::Response" : "0",
+            "JSON" : "2.34",
             "LWP::UserAgent" : "0",
             "Test::Fake::HTTPD" : "0",
             "Test::More" : "0.96",
@@ -68,7 +69,7 @@
          "web" : "https://github.com/renatocron/Stash-REST"
       }
    },
-   "version" : "0.03",
+   "version" : "0.032",
    "x_contributors" : [
       "Renato CRON <renato.cron@gmail.com>"
    ]
