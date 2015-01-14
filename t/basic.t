@@ -6,7 +6,12 @@ use HTTP::Response;
 use Test::Fake::HTTPD;
 use LWP::UserAgent;
 use URL::Encode qw/url_params_mixed/;
+
+use File::Temp qw/ tempfile/;
+use URI::QueryParam;
+
 my $httpd = Test::Fake::HTTPD->new( timeout => 5, );
+
 
 my $fakedatabase = {};
 my $seq          = 0;
@@ -19,11 +24,46 @@ $httpd->run(
         $seq++;
 
         my $data = $req->content;
-        $data = url_params_mixed($data) if $data;
+
+        $data = url_params_mixed($data) if $req->headers->header('Content-type') eq 'application/x-www-form-urlencoded';
+        $data = decode_json($data) if $req->headers->header('Content-type') eq 'application/json';
 
         if ( $req->method eq 'POST' ) {
 
-            if ( @pp == 1 ) {
+
+
+            if ( $req->uri->path eq '/post-with-params' ) {
+
+                return [
+                    200,
+                    [ 'Content-Type', 'application/json' ],
+                    [ encode_json({
+                        ilove => $data,
+                        params => {map {$_ => [($req->uri->query_param($_))]} $req->uri->query_param }
+                    }) ]
+                ];
+
+            }elsif ( $req->uri->path eq '/test-content-json' ) {
+
+                return [
+                    200,
+                    [ 'Content-Type', 'application/json' ],
+                    [ encode_json({ ilove => $data }) ]
+                ];
+
+            }elsif ( $req->uri->path eq '/test-file-upload' ){
+
+                # we don't need really parse the Content-Disposition... but HTTP::Body should be good for you.
+                my $ok1 = $data =~ /Content-Disposition: form-data; name="file1";/;
+                my $ok2 = $data =~ /Content-Disposition: form-data; name="file2";/;
+
+                return [
+                    200,
+                    [ 'Content-Type', 'application/json' ],
+                    [ encode_json( { oks => $ok1 + $ok2 }) ]
+                ];
+
+            }elsif ( @pp == 1 ) {
 
                 $fakedatabase->{ $pp[0] }{$seq} = my $obj = { id => $seq, %$data };
                 return [
@@ -36,7 +76,19 @@ $httpd->run(
         }
         elsif ( $req->method eq 'GET' ) {
 
-            if ( @pp == 1 ) {
+            if ($req->uri->path eq '/get-params'){
+
+                return [
+                    200,
+                    [ 'Content-Type', 'application/json' ],
+                    [
+                        encode_json(
+                            { params => {map {$_ => [($req->uri->query_param($_))]} $req->uri->query_param } }
+                        )
+                    ]
+                ];
+
+            }elsif ( @pp == 1 ) {
                 return [
                     200,
                     [ 'Content-Type', 'application/json' ],
@@ -258,13 +310,13 @@ eval{
         {'/an' => {'invalid/' => 'uri'}}
     );
 };
-like($@, qr|rest_post invalid uri param|, 'rest_post invalid uri param');
+like($@, qr|invalid uri param|, 'rest_post invalid uri param');
 
 
 eval{
     $obj->rest_get();
 };
-like($@, qr|rest_post invalid number of params|, 'rest_post invalid number of params');
+like($@, qr|invalid number of params|, 'rest_post invalid number of params');
 
 eval{
     $obj->rest_post(
@@ -290,5 +342,132 @@ $obj->rest_post(
     },
     [ name => 'foo', ]
 );
+
+$obj->rest_post(
+    '/test-content-json',
+    name  => 'add abob',
+    code => 200,
+    stash => 'testjson',
+    headers => [
+        'Content-Type' => 'application/json',
+    ],
+    data   => encode_json({ who => ['are', { you => 1.5 } ]}),
+);
+
+$obj->stash_ctx(
+    'testjson',
+    sub {
+        my ($me) = @_;
+        is_deeply( $me->{ilove}, { who => ['are', { you => 1.5 } ]}, 'server recived the json data and decoded it.' );
+    }
+);
+
+my ($fh, $filename) = tempfile();
+$obj->rest_post(
+    '/test-file-upload',
+    name  => 'add abob',
+    code => 200,
+    stash => 'testupload',
+    files => {
+        'file1' => $filename,
+        'file2' => $filename,
+    },
+    data   => [
+        'foo' => 123
+    ],
+);
+
+$obj->stash_ctx(
+    'testupload',
+    sub {
+        my ($me) = @_;
+        is($me->{oks}, 2, 'two files was uploaded');
+    }
+);
+unlink($filename);
+
+
+
+eval{
+    $obj->rest_get(
+        '/obs',
+        params => [ name => 'bar'  ],
+        data   => [ name => 'foo', ]
+    );
+};
+like($@, qr|Please, use only {params} instead|, 'Please, use only {params} instead');
+
+$obj->rest_get(
+    '/get-params',
+    stash => 'testparams',
+    params => [ name => 'bar'  ]
+);
+
+
+$obj->stash_ctx(
+    'testparams',
+    sub {
+        my ($me) = @_;
+
+        is_deeply($me->{params}, { name => ['bar'] }, 'params is encoded to url');
+    }
+);
+
+$obj->rest_get(
+    '/get-params',
+    stash => 'testparams',
+    data => [ name => 'fo'  ]
+);
+
+
+$obj->stash_ctx(
+    'testparams',
+    sub {
+        my ($me) = @_;
+
+        is_deeply($me->{params}, { name => ['fo'] }, 'data is converted to params if method is not POST or PUT');
+    }
+);
+
+$obj->rest_get(
+    '/get-params?name=foo',
+    stash => 'testparams',
+    params => [ name => 'zum'  ]
+);
+
+$obj->stash_ctx(
+    'testparams',
+    sub {
+        my ($me) = @_;
+        is_deeply($me->{params}, { name => ['foo', 'zum'] }, 'mixed params');
+    }
+);
+
+
+$obj->rest_post(
+    '/post-with-params?api_key=1',
+    stash => 'testparams',
+    params => [ another_key => 2 ],
+    headers => [
+        'Content-Type' => 'application/json',
+    ],
+    code => 200,
+    data   => encode_json({ hello => 'json'  }),
+);
+
+$obj->stash_ctx(
+    'testparams',
+    sub {
+        my ($me) = @_;
+        is_deeply($me, {
+            ilove => { hello => 'json' },
+            params => {
+                another_key => [2],
+                api_key => [1],
+            },
+        }, 'params with json body');
+    }
+);
+
 
 done_testing;

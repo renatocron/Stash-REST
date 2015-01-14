@@ -6,8 +6,9 @@ our $VERSION = '0.04';
 use warnings;
 use utf8;
 use URI;
+use URI::QueryParam;
 use HTTP::Request::Common qw(GET POST DELETE HEAD);
-use Carp qw/confess/;
+use Carp qw/confess cluck/;
 
 use Moo;
 use namespace::clean;
@@ -57,102 +58,122 @@ around 'stash' => sub {
 };
 
 sub _capture_args {
-    my ($self, @params) = @_;
+    my ($method, $self, @params) = @_;
     my ($uri, $data, %conf);
 
-    confess 'rest_post invalid number of params' if @params < 1;
+    confess 'invalid number of params' if @params < 1;
 
     $uri = shift @params;
-    confess 'rest_post invalid uri param' if ref $uri ne '' && ref $uri ne 'ARRAY';
+    confess 'invalid uri param' if ref $uri ne '' && ref $uri ne 'ARRAY';
 
     $uri = join '/', @$uri if ref $uri eq 'ARRAY';
 
+    # if number of params is odd, then, the last item is defined as $data
     if (scalar @params % 2 == 0){
         %conf = @params;
-        $data = exists $conf{data} ? $conf{data} : [];
+        $data = exists $conf{data} ? $conf{data} : undef;
     }else{
         $data = pop @params;
         %conf = @params;
     }
 
-    confess 'rest_post param $data invalid' unless ref $data eq 'ARRAY';
+    confess 'param $data should be an array ref'
+        if ref $data ne 'ARRAY' && (exists $conf{headers} && !grep { 'Content-Type' } @{$conf{headers}});
 
+    confess "Can't use ->{files} helper with custom Content-Type."
+        if exists $conf{files} && (exists $conf{headers} && grep { 'Content-Type' } @{$conf{headers}});
 
-    return ($self, $uri, $data, %conf);
+    my $can_have_body = $method =~ /POST|PUT/;
+
+    if (!$can_have_body && $data && ref $data eq 'ARRAY' && @$data){
+        confess "$method can't have {data}. Please, use only {params} instead" if (exists $conf{params});
+
+        $conf{params} = $data;
+
+    }elsif(!$can_have_body && $data){
+        cluck "$method does not allow body. You may have problems with proxy. Consider removing it";
+        $conf{data} = $data;
+    }else{
+        $conf{data} = $data;
+    }
+
+    return ($self, $uri, %conf);
 }
 
 sub rest_put {
-    my ($self, $url, $data, %conf) = &_capture_args(@_);
+    my ($self, $url, %conf) = &_capture_args('PUT', @_);
 
-    $self->call_trigger('before_rest_put', \$url, \$data, \%conf);
+    $self->call_trigger('before_rest_put', { url => $url, conf => \%conf} );
     $self->_rest_request(
         $url,
         code => ( exists $conf{is_fail} ? 400 : 202 ),
         %conf,
-        method => 'PUT',
-        $data
+        method => 'PUT'
     );
 }
 
 sub rest_head {
-    my ($self, $url, $data, %conf) = &_capture_args(@_);
+    my ($self, $url, %conf) = &_capture_args('HEAD', @_);
 
-    $self->call_trigger('before_rest_head', \$url, \$data, \%conf);
+    $self->call_trigger('before_rest_head', { url => $url, conf => \%conf});
     $self->_rest_request(
         $url,
         code => 200,
         %conf,
-        method => 'HEAD',
-        $data
+        method => 'HEAD'
     );
 }
 
 sub rest_delete {
-    my ($self, $url, $data, %conf) = &_capture_args(@_);
+    my ($self, $url, %conf) = &_capture_args('DELETE', @_);
 
-    $self->call_trigger('before_rest_delete', \$url, \$data, \%conf);
+    $self->call_trigger('before_rest_delete', { url => $url, conf => \%conf});
     $self->_rest_request(
         $url,
         code => 204,
         %conf,
-        method => 'DELETE',
-        $data
+        method => 'DELETE'
     );
 }
 
 sub rest_get {
-    my ($self, $url, $data, %conf) = &_capture_args(@_);
+    my ($self, $url, %conf) = &_capture_args('GET', @_);
 
-    $self->call_trigger('before_rest_get', \$url, \$data, \%conf);
+    $self->call_trigger('before_rest_get', { url => $url, conf => \%conf});
     $self->_rest_request(
         $url,
         code => 200,
         %conf,
-        method => 'GET',
-        $data
+        method => 'GET'
     );
 }
 
 sub rest_post {
-    my ($self, $url, $data, %conf) = &_capture_args(@_);
-    $self->call_trigger('before_rest_post', \$url, \$data, \%conf);
+    my ($self, $url, %conf) = &_capture_args('POST', @_);
+    $self->call_trigger('before_rest_post', { url => $url, conf => \%conf} );
 
     $self->_rest_request(
         $url,
         %conf,
-        method => 'POST',
-        $data
+        method => 'POST'
     );
 }
 
 sub _rest_request {
-    my ($self, $url, $data, %conf) = &_capture_args(@_);
+    my ($self, $url, %conf) = @_;
+
+    my $data    = exists $conf{data} ? $conf{data} : undef;
 
     my $is_fail = exists $conf{is_fail} && $conf{is_fail};
 
     my $code = $conf{code};
     $code ||= $is_fail ? 400 : 201;
     $conf{code} = $code;
+
+
+    my $uri = URI->new($url);
+    $uri->query_param_append( @{$conf{params}} ) if $conf{params};
+    $url = $uri->as_string;
 
     my $stashkey = exists $conf{stash} ? $conf{stash} : undef;
 
@@ -161,7 +182,11 @@ sub _rest_request {
     my $req;
 
     if ( !exists $conf{files} ) {
-        $req = POST $url, $data, @headers;
+        if (defined $data){
+            $req = POST $url, @headers, Content => $data;
+        }else{
+            $req = GET $url, @headers;
+        }
     }
     else {
         $conf{files}{$_} = [ $conf{files}{$_} ] for keys %{ $conf{files} };
@@ -169,12 +194,13 @@ sub _rest_request {
         $req = POST $url,
           @headers,
           'Content-Type' => 'form-data',
-          Content => [ @$data, %{ $conf{files} } ];
+          Content => [ ($data && ref $data eq 'ARRAY'? @$data : ()), %{ $conf{files} } ];
     }
 
     $self->call_trigger('process_request', \$req, \%conf);
 
-    $req->method( $conf{method} ) if exists $conf{method};
+    # change to correct method.
+    $req->method( $conf{method} );
 
     my $res = eval{$self->do_request()->($req)};
     confess "request died: $@" if $@;
