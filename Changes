@@ -1,6 +1,8 @@
 Revision history for Stash-REST
 
 {{$NEXT}}
+        - Remove wrong but harmless "ARRAY[XXXXXX]: " header on rest_reload and rest_reload_list... my fault!
+        - minor docs revision.
 
 0.052  2015-01-14 11:48:35 BRST
         - NOT POST or PUT should transforms data into params, even if params is an empty arrayref

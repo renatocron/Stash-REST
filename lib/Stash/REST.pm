@@ -1,7 +1,7 @@
 package Stash::REST;
 use strict;
 use 5.008_005;
-our $VERSION = '0.052';
+our $VERSION = '0.054';
 
 use warnings;
 use utf8;
@@ -281,7 +281,7 @@ sub rest_reload {
     confess 'prepare_request must be a coderef'
       if $prepare_request && ref $prepare_request ne 'CODE';
 
-    my $req = POST $item_url, @headers, [];
+    my $req = GET $item_url, @headers;
     $req->method('GET');
     $prepare_request->($req) if $prepare_request;
 
@@ -341,8 +341,7 @@ sub rest_reload_list {
     confess 'prepare_request must be a coderef'
       if $prepare_request && ref $prepare_request ne 'CODE';
 
-    my $req = POST $item_url, @headers, [];
-    $req->method('GET');
+    my $req = GET $item_url, @headers;
     $prepare_request->($req) if $prepare_request;
 
     $self->call_trigger( 'process_request', { req => $req, conf => \%conf } );
@@ -605,10 +604,10 @@ This test if $res->code equivalent to expected. Die with confess if not archived
 
 =head4 stash => 'foobar'
 
-Load parsed response on C< $obj-E<gt>stash-E<gt>{foobar} > and some others fields
+Load parsed response on C< $obj->stash->{foobar} > and some others fields
 
-C< $obj-E<gt>stash-E<gt>{foobar.id} > if response code is 201 and parsed response contains ->{id}
-C< $obj-E<gt>stash-E<gt>{foobar.url} > if response code is 201 and header contains Location (confess if missed)
+C< $obj->stash->{foobar.id} > if response code is 201 and parsed response contains ->{id}
+C< $obj->stash->{foobar.url} > if response code is 201 and header contains Location (confess if missed)
 
 =head4 params => []
 
@@ -657,10 +656,8 @@ Modify secondary requests like GET /foo or GET Location after a POST /foo
 
 =head4 list => 1,
 
-If true, a GET on the same $url will occur and parsed data will be stashed on
-C< $obj-E<gt>stash-E<gt>{foobar.list} > and list-url on C< $obj-E<gt>stash-E<gt>{foobar.list-url} >
-
-This is recomended if you are creating something with rest_post and want a list.
+If true, Location header will be looked and a GET on Location will occur and parsed data will be stashed on
+C< $obj->stash->{foobar.list} > and list-url on C< $obj->stash->{foobar.list-url} >
 
 =head2 stash_ctx
 
