@@ -16,26 +16,26 @@ use namespace::clean;
 use Class::Trigger;
 
 has 'do_request' => (
-    is => 'rw',
-    isa => sub {die "$_[0] is not a CodeRef" unless ref $_[0] eq 'CODE'},
+    is       => 'rw',
+    isa      => sub { die "$_[0] is not a CodeRef" unless ref $_[0] eq 'CODE' },
     required => 1
 );
 
 has 'decode_response' => (
-    is => 'rw',
-    isa => sub {die "$_[0] is not a CodeRef" unless ref $_[0] eq 'CODE'},
+    is       => 'rw',
+    isa      => sub { die "$_[0] is not a CodeRef" unless ref $_[0] eq 'CODE' },
     required => 1
 );
 
 has 'stash' => (
-    is => 'rw',
-    isa => sub {die "$_[0] is not a HashRef" unless ref $_[0] eq 'HASH'},
+    is  => 'rw',
+    isa => sub { die "$_[0] is not a HashRef" unless ref $_[0] eq 'HASH' },
     default => sub { {} }
 );
 
 has 'fixed_headers' => (
-    is => 'rw',
-    isa => sub {die "$_[0] is not a ArrayRef" unless ref $_[0] eq 'ARRAY'},
+    is  => 'rw',
+    isa => sub { die "$_[0] is not a ArrayRef" unless ref $_[0] eq 'ARRAY' },
     default => sub { [] }
 );
 
@@ -58,8 +58,8 @@ around 'stash' => sub {
 };
 
 sub _capture_args {
-    my ($method, $self, @params) = @_;
-    my ($uri, $data, %conf);
+    my ( $method, $self, @params ) = @_;
+    my ( $uri, $data, %conf );
 
     confess 'invalid number of params' if @params < 1;
 
@@ -69,41 +69,44 @@ sub _capture_args {
     $uri = join '/', @$uri if ref $uri eq 'ARRAY';
 
     # if number of params is odd, then, the last item is defined as $data
-    if (scalar @params % 2 == 0){
+    if ( scalar @params % 2 == 0 ) {
         %conf = @params;
         $data = exists $conf{data} ? $conf{data} : undef;
-    }else{
+    }
+    else {
         $data = pop @params;
         %conf = @params;
     }
 
     confess 'param $data should be an array ref'
-        if ref $data ne 'ARRAY' && (exists $conf{headers} && !grep { 'Content-Type' } @{$conf{headers}});
+      if ref $data ne 'ARRAY' && ( exists $conf{headers} && !grep { 'Content-Type' } @{ $conf{headers} } );
 
     confess "Can't use ->{files} helper with custom Content-Type."
-        if exists $conf{files} && (exists $conf{headers} && grep { 'Content-Type' } @{$conf{headers}});
+      if exists $conf{files} && ( exists $conf{headers} && grep { 'Content-Type' } @{ $conf{headers} } );
 
     my $can_have_body = $method =~ /POST|PUT/;
 
-    if (!$can_have_body && $data && ref $data eq 'ARRAY' && @$data){
-        confess "$method can't have {data}. Please, use only {params} instead" if (exists $conf{params});
+    if ( !$can_have_body && $data && ref $data eq 'ARRAY' && @$data ) {
+        confess "$method can't have {data}. Please, use only {params} instead" if ( exists $conf{params} );
 
         $conf{params} = $data;
 
-    }elsif(!$can_have_body && $data){
+    }
+    elsif ( !$can_have_body && $data ) {
         cluck "$method does not allow body. You may have problems with proxy. Consider removing it";
         $conf{data} = $data;
-    }else{
+    }
+    else {
         $conf{data} = $data;
     }
 
-    return ($self, $uri, %conf);
+    return ( $self, $uri, %conf );
 }
 
 sub rest_put {
-    my ($self, $url, %conf) = &_capture_args('PUT', @_);
+    my ( $self, $url, %conf ) = &_capture_args( 'PUT', @_ );
 
-    $self->call_trigger('before_rest_put', { url => $url, conf => \%conf} );
+    $self->call_trigger( 'before_rest_put', { url => $url, conf => \%conf } );
     $self->_rest_request(
         $url,
         code => ( exists $conf{is_fail} ? 400 : 202 ),
@@ -113,9 +116,9 @@ sub rest_put {
 }
 
 sub rest_head {
-    my ($self, $url, %conf) = &_capture_args('HEAD', @_);
+    my ( $self, $url, %conf ) = &_capture_args( 'HEAD', @_ );
 
-    $self->call_trigger('before_rest_head', { url => $url, conf => \%conf});
+    $self->call_trigger( 'before_rest_head', { url => $url, conf => \%conf } );
     $self->_rest_request(
         $url,
         code => 200,
@@ -125,9 +128,9 @@ sub rest_head {
 }
 
 sub rest_delete {
-    my ($self, $url, %conf) = &_capture_args('DELETE', @_);
+    my ( $self, $url, %conf ) = &_capture_args( 'DELETE', @_ );
 
-    $self->call_trigger('before_rest_delete', { url => $url, conf => \%conf});
+    $self->call_trigger( 'before_rest_delete', { url => $url, conf => \%conf } );
     $self->_rest_request(
         $url,
         code => 204,
@@ -137,9 +140,9 @@ sub rest_delete {
 }
 
 sub rest_get {
-    my ($self, $url, %conf) = &_capture_args('GET', @_);
+    my ( $self, $url, %conf ) = &_capture_args( 'GET', @_ );
 
-    $self->call_trigger('before_rest_get', { url => $url, conf => \%conf});
+    $self->call_trigger( 'before_rest_get', { url => $url, conf => \%conf } );
     $self->_rest_request(
         $url,
         code => 200,
@@ -149,20 +152,16 @@ sub rest_get {
 }
 
 sub rest_post {
-    my ($self, $url, %conf) = &_capture_args('POST', @_);
-    $self->call_trigger('before_rest_post', { url => $url, conf => \%conf} );
+    my ( $self, $url, %conf ) = &_capture_args( 'POST', @_ );
+    $self->call_trigger( 'before_rest_post', { url => $url, conf => \%conf } );
 
-    $self->_rest_request(
-        $url,
-        %conf,
-        method => 'POST'
-    );
+    $self->_rest_request( $url, %conf, method => 'POST' );
 }
 
 sub _rest_request {
-    my ($self, $url, %conf) = @_;
+    my ( $self, $url, %conf ) = @_;
 
-    my $data    = exists $conf{data} ? $conf{data} : undef;
+    my $data = exists $conf{data} ? $conf{data} : undef;
 
     my $is_fail = exists $conf{is_fail} && $conf{is_fail};
 
@@ -170,58 +169,57 @@ sub _rest_request {
     $code ||= $is_fail ? 400 : 201;
     $conf{code} = $code;
 
-
     my $uri = URI->new($url);
-    $uri->query_param_append( @{$conf{params}} ) if $conf{params};
+    $uri->query_param_append( @{ $conf{params} } ) if $conf{params};
     $url = $uri->as_string;
 
     my $stashkey = exists $conf{stash} ? $conf{stash} : undef;
 
-    my @headers = (@{$self->fixed_headers()}, @{$conf{headers}||[]} );
+    my @headers = ( @{ $self->fixed_headers() }, @{ $conf{headers} || [] } );
 
     my $req;
 
     if ( !exists $conf{files} ) {
-        if (defined $data){
+        if ( defined $data ) {
             $req = POST $url, @headers, Content => $data;
-        }else{
+        }
+        else {
             $req = GET $url, @headers;
         }
     }
     else {
         $conf{files}{$_} = [ $conf{files}{$_} ] for keys %{ $conf{files} };
 
-        $req = POST $url,
-          @headers,
+        $req = POST $url, @headers,
           'Content-Type' => 'form-data',
-          Content => [ ($data && ref $data eq 'ARRAY'? @$data : ()), %{ $conf{files} } ];
+          Content        => [ ( $data && ref $data eq 'ARRAY' ? @$data : () ), %{ $conf{files} } ];
     }
 
-    $self->call_trigger('process_request', \$req, \%conf);
+    $self->call_trigger( 'process_request', \$req, \%conf );
 
     # change to correct method.
     $req->method( $conf{method} );
 
-    my $res = eval{$self->do_request()->($req)};
+    my $res = eval { $self->do_request()->($req) };
     confess "request died: $@" if $@;
 
-    $self->call_trigger('process_response', \$req, \$res, \%conf);
+    $self->call_trigger( 'process_response', \$req, \$res, \%conf );
 
     #is( $res->code, $code, $name . ' status code is ' . $code );
-    confess 'response expected fail and it is successed' if $is_fail && $res->is_success;
+    confess 'response expected fail and it is successed' if $is_fail  && $res->is_success;
     confess 'response expected success and it is failed' if !$is_fail && !$res->is_success;
 
-    confess 'response code [',$res->code,'] diverge expected [',$code,']' if $code != $res->code;
+    confess 'response code [', $res->code, '] diverge expected [', $code, ']' if $code != $res->code;
 
-    $self->call_trigger('process_response_success', \$req, \$res, \%conf);
+    $self->call_trigger( 'process_response_success', \$req, \$res, \%conf );
 
     return '' if $code == 204;
     return $res if exists $conf{method} && $conf{method} eq 'HEAD';
 
-    my $obj = eval { $self->decode_response()->( $res ) };
+    my $obj = eval { $self->decode_response()->($res) };
     confess("decode_response failed: $@") if $@;
 
-    $self->call_trigger('response_decoded', \$req, \$res, \$obj, \%conf);
+    $self->call_trigger( 'response_decoded', \$req, \$res, \$obj, \%conf );
 
     if ($stashkey) {
         $self->stash->{$stashkey} = $obj;
@@ -233,17 +231,18 @@ sub _rest_request {
 
             my $item_url = $res->header('Location');
 
-            if ($item_url){
-                $self->stash->{$stashkey . '.url'} = $item_url ;
+            if ($item_url) {
+                $self->stash->{ $stashkey . '.url' } = $item_url;
 
                 $self->rest_reload($stashkey);
 
-                $self->call_trigger('item_loaded', $stashkey, \%conf);
-            }else{
+                $self->call_trigger( 'item_loaded', $stashkey, \%conf );
+            }
+            else {
                 confess 'requests with response code 201 should contain header Location';
             }
 
-            $self->call_trigger('stash_added', $stashkey, \%conf);
+            $self->call_trigger( 'stash_added', $stashkey, \%conf );
         }
     }
 
@@ -253,13 +252,12 @@ sub _rest_request {
 
         $self->rest_reload_list($stashkey);
 
-        $self->call_trigger('list_loaded', $stashkey, \%conf);
+        $self->call_trigger( 'list_loaded', $stashkey, \%conf );
 
     }
 
     return $obj;
 }
-
 
 sub rest_reload {
     my $self     = shift;
@@ -270,8 +268,7 @@ sub rest_reload {
     my $code = exists $conf{code} ? $conf{code} : 200;
     $conf{code} = $code;
 
-
-    my @headers = (@{$self->fixed_headers()}, @{$conf{headers}||[]} );
+    my @headers = ( @{ $self->fixed_headers() }, @{ $conf{headers} || [] } );
     my $item_url = $self->stash->{ $stashkey . '.url' };
 
     confess "can't stash $stashkey.url is not valid" unless $item_url;
@@ -282,38 +279,38 @@ sub rest_reload {
       : undef;
 
     confess 'prepare_request must be a coderef'
-        if $prepare_request && ref $prepare_request ne 'CODE';
+      if $prepare_request && ref $prepare_request ne 'CODE';
 
     my $req = POST $item_url, @headers, [];
     $req->method('GET');
     $prepare_request->($req) if $prepare_request;
 
-    $self->call_trigger('process_request', \$req, \%conf);
+    $self->call_trigger( 'process_request', \$req, \%conf );
     my $res = $self->do_request()->($req);
 
-    $self->call_trigger('process_response', \$req, \$res, \%conf);
+    $self->call_trigger( 'process_response', \$req, \$res, \%conf );
 
     confess 'request code diverge expected' if $code != $res->code;
 
-    $self->call_trigger('process_response_success', \$req, \$res, \%conf);
+    $self->call_trigger( 'process_response_success', \$req, \$res, \%conf );
 
     my $obj;
     if ( $res->code == 200 ) {
-        my $obj = eval { $self->decode_response()->( $res ) };
+        my $obj = eval { $self->decode_response()->($res) };
         confess("decode_response failed: $@") if $@;
 
-        $self->call_trigger('response_decoded', \$req, \$res, \$obj, \%conf);
+        $self->call_trigger( 'response_decoded', \$req, \$res, \$obj, \%conf );
 
         $self->stash( $stashkey . '.get' => $obj );
     }
     elsif ( $res->code == 404 ) {
 
-        $self->call_trigger('stash_removed', $stashkey, \%conf);
+        $self->call_trigger( 'stash_removed', $stashkey, \%conf );
 
         # $self->stash->{ $stashkey . '.get' };
         delete $self->stash->{ $stashkey . '.id' };
         delete $self->stash->{ $stashkey . '.url' };
-        delete $self->stash->{ $stashkey };
+        delete $self->stash->{$stashkey};
 
     }
     else {
@@ -322,7 +319,6 @@ sub rest_reload {
 
     return $obj;
 }
-
 
 sub rest_reload_list {
     my $self     = shift;
@@ -333,7 +329,7 @@ sub rest_reload_list {
     my $code = exists $conf{code} ? $conf{code} : 200;
     $conf{code} = $code;
 
-    my @headers = (@{$self->fixed_headers()}, @{$conf{headers}||[]} );
+    my @headers = ( @{ $self->fixed_headers() }, @{ $conf{headers} || [] } );
     my $item_url = $self->stash->{ $stashkey . '.list-url' };
 
     confess "can't stash $stashkey.list-url is not valid" unless $item_url;
@@ -343,28 +339,28 @@ sub rest_reload_list {
       ? $self->stash->{ $stashkey . '.prepare_request' }
       : undef;
     confess 'prepare_request must be a coderef'
-        if $prepare_request && ref $prepare_request ne 'CODE';
+      if $prepare_request && ref $prepare_request ne 'CODE';
 
     my $req = POST $item_url, @headers, [];
     $req->method('GET');
     $prepare_request->($req) if $prepare_request;
 
-    $self->call_trigger('process_request', \$req, \%conf);
+    $self->call_trigger( 'process_request', \$req, \%conf );
 
     my $res = $self->do_request()->($req);
 
-    $self->call_trigger('process_response', \$req, \$res, \%conf);
+    $self->call_trigger( 'process_response', \$req, \$res, \%conf );
 
     confess 'request code diverge expected' if $code != $res->code;
 
-    $self->call_trigger('process_response_success', \$req, \$res, \%conf);
+    $self->call_trigger( 'process_response_success', \$req, \$res, \%conf );
 
     my $obj;
     if ( $res->code == 200 ) {
-        my $obj = eval { $self->decode_response()->( $res ) };
+        my $obj = eval { $self->decode_response()->($res) };
         confess("decode_response failed: $@") if $@;
 
-        $self->call_trigger('response_decoded', \$req, \$res, \$obj, \%conf);
+        $self->call_trigger( 'response_decoded', \$req, \$res, \$obj, \%conf );
 
         $self->stash( $stashkey . '.list' => $obj );
     }
@@ -378,14 +374,13 @@ sub rest_reload_list {
 sub stash_ctx {
     my ( $self, $staname, $sub ) = @_;
 
-    $self->call_trigger('before_stash_ctx', $staname);
+    $self->call_trigger( 'before_stash_ctx', $staname );
 
     my @ret = $sub->( $self->stash->{$staname} );
 
-    $self->call_trigger('after_stash_ctx', $staname, \@ret);
+    $self->call_trigger( 'after_stash_ctx', $staname, \@ret );
     return @ret;
 }
-
 
 1;
 

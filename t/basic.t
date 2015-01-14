@@ -12,7 +12,6 @@ use URI::QueryParam;
 
 my $httpd = Test::Fake::HTTPD->new( timeout => 5, );
 
-
 my $fakedatabase = {};
 my $seq          = 0;
 $httpd->run(
@@ -26,44 +25,41 @@ $httpd->run(
         my $data = $req->content;
 
         $data = url_params_mixed($data) if $req->headers->header('Content-type') eq 'application/x-www-form-urlencoded';
-        $data = decode_json($data) if $req->headers->header('Content-type') eq 'application/json';
+        $data = decode_json($data)      if $req->headers->header('Content-type') eq 'application/json';
 
         if ( $req->method eq 'POST' ) {
-
-
 
             if ( $req->uri->path eq '/post-with-params' ) {
 
                 return [
                     200,
                     [ 'Content-Type', 'application/json' ],
-                    [ encode_json({
-                        ilove => $data,
-                        params => {map {$_ => [($req->uri->query_param($_))]} $req->uri->query_param }
-                    }) ]
+                    [
+                        encode_json(
+                            {
+                                ilove  => $data,
+                                params => { map { $_ => [ ( $req->uri->query_param($_) ) ] } $req->uri->query_param }
+                            }
+                        )
+                    ]
                 ];
 
-            }elsif ( $req->uri->path eq '/test-content-json' ) {
+            }
+            elsif ( $req->uri->path eq '/test-content-json' ) {
 
-                return [
-                    200,
-                    [ 'Content-Type', 'application/json' ],
-                    [ encode_json({ ilove => $data }) ]
-                ];
+                return [ 200, [ 'Content-Type', 'application/json' ], [ encode_json( { ilove => $data } ) ] ];
 
-            }elsif ( $req->uri->path eq '/test-file-upload' ){
+            }
+            elsif ( $req->uri->path eq '/test-file-upload' ) {
 
                 # we don't need really parse the Content-Disposition... but HTTP::Body should be good for you.
                 my $ok1 = $data =~ /Content-Disposition: form-data; name="file1";/;
                 my $ok2 = $data =~ /Content-Disposition: form-data; name="file2";/;
 
-                return [
-                    200,
-                    [ 'Content-Type', 'application/json' ],
-                    [ encode_json( { oks => $ok1 + $ok2 }) ]
-                ];
+                return [ 200, [ 'Content-Type', 'application/json' ], [ encode_json( { oks => $ok1 + $ok2 } ) ] ];
 
-            }elsif ( @pp == 1 ) {
+            }
+            elsif ( @pp == 1 ) {
 
                 $fakedatabase->{ $pp[0] }{$seq} = my $obj = { id => $seq, %$data };
                 return [
@@ -76,19 +72,20 @@ $httpd->run(
         }
         elsif ( $req->method eq 'GET' ) {
 
-            if ($req->uri->path eq '/get-params'){
+            if ( $req->uri->path eq '/get-params' ) {
 
                 return [
                     200,
                     [ 'Content-Type', 'application/json' ],
                     [
                         encode_json(
-                            { params => {map {$_ => [($req->uri->query_param($_))]} $req->uri->query_param } }
+                            { params => { map { $_ => [ ( $req->uri->query_param($_) ) ] } $req->uri->query_param } }
                         )
                     ]
                 ];
 
-            }elsif ( @pp == 1 ) {
+            }
+            elsif ( @pp == 1 ) {
                 return [
                     200,
                     [ 'Content-Type', 'application/json' ],
@@ -129,8 +126,9 @@ $httpd->run(
                 ];
             }
 
-        }elsif ($req->method eq 'HEAD'){
-            return [ 200, [ Foo => 1 ], [] ]
+        }
+        elsif ( $req->method eq 'HEAD' ) {
+            return [ 200, [ Foo => 1 ], [] ];
         }
 
         [ 500, [ 'Content-Type', 'application/json' ], ['{"error":"fatal"}'] ];
@@ -147,7 +145,7 @@ my $obj = Stash::REST->new(
     },
     decode_response => sub {
         my $res = shift;
-        return decode_json($res->content);
+        return decode_json( $res->content );
     },
 );
 is( ref $obj, 'Stash::REST', 'obj is Stash::REST' );
@@ -167,16 +165,16 @@ is( $obj->stash->{'bar3'}, '3', 'bar3 is 3' );
 my $run = 0;
 $obj->rest_post(
     '/zuzus',
-    name  => 'add zuzu',
-    list  => 1,
-    stash => 'easyname',
+    name            => 'add zuzu',
+    list            => 1,
+    stash           => 'easyname',
     prepare_request => sub {
-        is(ref $_[0], 'HTTP::Request', 'HTTP::Request recived on prepare_request');
+        is( ref $_[0], 'HTTP::Request', 'HTTP::Request recived on prepare_request' );
         $run++;
     },
     [ name => 'foo', ]
 );
-is($run, '2', '2 executions of prepare_request');
+is( $run, '2', '2 executions of prepare_request' );
 
 is( ref $obj->stash->{'easyname'},      'HASH',    'stash easyname is hash' );
 is( ref $obj->stash->{'easyname.get'},  'HASH',    'stash easyname.get is hash' );
@@ -216,10 +214,8 @@ $obj->rest_put(
 );
 
 do {
-    my $res = $obj->rest_head(
-        $obj->stash('easyname.url'),
-    );
-    is($res->headers->header('foo'), '1', 'header is present');
+    my $res = $obj->rest_head( $obj->stash('easyname.url'), );
+    is( $res->headers->header('foo'), '1', 'header is present' );
 };
 
 $obj->rest_reload('easyname');
@@ -251,128 +247,106 @@ $obj->stash_ctx(
     }
 );
 
-
 do {
     my $run = 0;
     $obj->rest_post(
         '/abos',
-        name  => 'create without list',
-        stash => 'easyname2',
-        is_fail => 0, # default is 0
+        name            => 'create without list',
+        stash           => 'easyname2',
+        is_fail         => 0,                       # default is 0
         prepare_request => sub {
-            is(ref $_[0], 'HTTP::Request', 'HTTP::Request recived on prepare_request');
+            is( ref $_[0], 'HTTP::Request', 'HTTP::Request recived on prepare_request' );
             $run++;
         },
         [ name => 'foo', ]
     );
-    is($run, '1', '1 execution of prepare_request');
+    is( $run, '1', '1 execution of prepare_request' );
 };
 
 $obj->rest_get(
-    ['abox', '1'], # same as /abox/1
-    name  => 'get with 404',
+    [ 'abox', '1' ],                                # same as /abox/1
+    name    => 'get with 404',
     is_fail => 1,
-    code => 404,
-    stash => 'easyname3',
-    [ query_param => 1, query_param2 => 2]
+    code    => 404,
+    stash   => 'easyname3',
+    [ query_param => 1, query_param2 => 2 ]
 );
 
-eval{
+eval {
     $obj->rest_get(
         '/things/deep/url/not/planed',
         stash => 'zu',
-        data => [ you => 'can' => 'pass' => 'data with %conf too' ]
+        data  => [ you => 'can' => 'pass' => 'data with %conf too' ]
     );
 };
-like($@, qr/response expected success and it is failed/, 'response expected success and it is failed');
+like( $@, qr/response expected success and it is failed/, 'response expected success and it is failed' );
 
-eval{
-    $obj->rest_get(
-        '/things',
-        stash => 'zu',
-        is_fail => 1
-    );
-};
-like($@, qr/response expected fail and it is successed/, 'response expected fail and it is successed');
+eval { $obj->rest_get( '/things', stash => 'zu', is_fail => 1 ); };
+like( $@, qr/response expected fail and it is successed/, 'response expected fail and it is successed' );
 
+eval { $obj->rest_get( '/things', stash => 'zu', code => 230 ); };
+like( $@, qr|response code \[200\] diverge expected \[230\]|, 'response code [200] diverge expected [230] ' );
 
-eval{
-    $obj->rest_get(
-        '/things',
-        stash => 'zu',
-        code => 230
-    );
-};
-like($@, qr|response code \[200\] diverge expected \[230\]|, 'response code [200] diverge expected [230] ');
+eval { $obj->rest_get( { '/an' => { 'invalid/' => 'uri' } } ); };
+like( $@, qr|invalid uri param|, 'rest_post invalid uri param' );
 
-eval{
-    $obj->rest_get(
-        {'/an' => {'invalid/' => 'uri'}}
-    );
-};
-like($@, qr|invalid uri param|, 'rest_post invalid uri param');
+eval { $obj->rest_get(); };
+like( $@, qr|invalid number of params|, 'rest_post invalid number of params' );
 
-
-eval{
-    $obj->rest_get();
-};
-like($@, qr|invalid number of params|, 'rest_post invalid number of params');
-
-eval{
+eval {
     $obj->rest_post(
         '/zuzus',
-        name  => 'add zuzu',
-        list  => 1,
-        stash => 'easyname',
+        name            => 'add zuzu',
+        list            => 1,
+        stash           => 'easyname',
         prepare_request => 1,
         [ name => 'foo', ]
     );
 };
-like($@, qr|prepare_request must be a coderef|, 'prepare_request must be a coderef');
+like( $@, qr|prepare_request must be a coderef|, 'prepare_request must be a coderef' );
 
-
-$obj->fixed_headers([ a_header => 12 ]);
+$obj->fixed_headers( [ a_header => 12 ] );
 $obj->rest_post(
     '/abob',
-    name  => 'add abob',
-    list  => 1,
-    stash => 'easyname',
+    name            => 'add abob',
+    list            => 1,
+    stash           => 'easyname',
     prepare_request => sub {
-        is($_[0]->headers->header('a_header'), '12', 'the fixed headers are sent');
+        is( $_[0]->headers->header('a_header'), '12', 'the fixed headers are sent' );
     },
     [ name => 'foo', ]
 );
 
 $obj->rest_post(
     '/test-content-json',
-    name  => 'add abob',
-    code => 200,
-    stash => 'testjson',
+    name    => 'add abob',
+    code    => 200,
+    stash   => 'testjson',
     headers => [
         'Content-Type' => 'application/json',
     ],
-    data   => encode_json({ who => ['are', { you => 1.5 } ]}),
+    data => encode_json( { who => [ 'are', { you => 1.5 } ] } ),
 );
 
 $obj->stash_ctx(
     'testjson',
     sub {
         my ($me) = @_;
-        is_deeply( $me->{ilove}, { who => ['are', { you => 1.5 } ]}, 'server recived the json data and decoded it.' );
+        is_deeply( $me->{ilove}, { who => [ 'are', { you => 1.5 } ] }, 'server recived the json data and decoded it.' );
     }
 );
 
-my ($fh, $filename) = tempfile();
+my ( $fh, $filename ) = tempfile();
 $obj->rest_post(
     '/test-file-upload',
     name  => 'add abob',
-    code => 200,
+    code  => 200,
     stash => 'testupload',
     files => {
         'file1' => $filename,
         'file2' => $filename,
     },
-    data   => [
+    data => [
         'foo' => 123
     ],
 );
@@ -381,93 +355,85 @@ $obj->stash_ctx(
     'testupload',
     sub {
         my ($me) = @_;
-        is($me->{oks}, 2, 'two files was uploaded');
+        is( $me->{oks}, 2, 'two files was uploaded' );
     }
 );
 unlink($filename);
 
-
-
-eval{
-    $obj->rest_get(
-        '/obs',
-        params => [ name => 'bar'  ],
-        data   => [ name => 'foo', ]
-    );
-};
-like($@, qr|Please, use only {params} instead|, 'Please, use only {params} instead');
+eval { $obj->rest_get( '/obs', params => [ name => 'bar' ], data => [ name => 'foo', ] ); };
+like( $@, qr|Please, use only {params} instead|, 'Please, use only {params} instead' );
 
 $obj->rest_get(
     '/get-params',
-    stash => 'testparams',
-    params => [ name => 'bar'  ]
+    stash  => 'testparams',
+    params => [ name => 'bar' ]
 );
-
 
 $obj->stash_ctx(
     'testparams',
     sub {
         my ($me) = @_;
 
-        is_deeply($me->{params}, { name => ['bar'] }, 'params is encoded to url');
+        is_deeply( $me->{params}, { name => ['bar'] }, 'params is encoded to url' );
     }
 );
 
 $obj->rest_get(
     '/get-params',
     stash => 'testparams',
-    data => [ name => 'fo'  ]
+    data  => [ name => 'fo' ]
 );
-
 
 $obj->stash_ctx(
     'testparams',
     sub {
         my ($me) = @_;
 
-        is_deeply($me->{params}, { name => ['fo'] }, 'data is converted to params if method is not POST or PUT');
+        is_deeply( $me->{params}, { name => ['fo'] }, 'data is converted to params if method is not POST or PUT' );
     }
 );
 
 $obj->rest_get(
     '/get-params?name=foo',
-    stash => 'testparams',
-    params => [ name => 'zum'  ]
+    stash  => 'testparams',
+    params => [ name => 'zum' ]
 );
 
 $obj->stash_ctx(
     'testparams',
     sub {
         my ($me) = @_;
-        is_deeply($me->{params}, { name => ['foo', 'zum'] }, 'mixed params');
+        is_deeply( $me->{params}, { name => [ 'foo', 'zum' ] }, 'mixed params' );
     }
 );
 
-
 $obj->rest_post(
     '/post-with-params?api_key=1',
-    stash => 'testparams',
-    params => [ another_key => 2 ],
+    stash   => 'testparams',
+    params  => [ another_key => 2 ],
     headers => [
         'Content-Type' => 'application/json',
     ],
     code => 200,
-    data   => encode_json({ hello => 'json'  }),
+    data => encode_json( { hello => 'json' } ),
 );
 
 $obj->stash_ctx(
     'testparams',
     sub {
         my ($me) = @_;
-        is_deeply($me, {
-            ilove => { hello => 'json' },
-            params => {
-                another_key => [2],
-                api_key => [1],
+        is_deeply(
+            $me,
+            {
+                ilove  => { hello => 'json' },
+                params => {
+                    another_key => [2],
+                    api_key     => [1],
+                },
             },
-        }, 'params with json body');
+            'params with json body'
+        );
     }
 );
-
 
 done_testing;
