@@ -1,7 +1,7 @@
 package Stash::REST;
 use strict;
 use 5.008_005;
-our $VERSION = '0.05';
+our $VERSION = '0.052';
 
 use warnings;
 use utf8;
@@ -86,7 +86,7 @@ sub _capture_args {
 
     my $can_have_body = $method =~ /POST|PUT/;
 
-    if ( !$can_have_body && $data && ref $data eq 'ARRAY' && @$data ) {
+    if ( !$can_have_body && $data && ref $data eq 'ARRAY' ) {
         confess "$method can't have {data}. Please, use only {params} instead" if ( exists $conf{params} );
 
         $conf{params} = $data;
