@@ -2,6 +2,12 @@ Revision history for Stash-REST
 
 {{$NEXT}}
 
+0.05  2015-01-14 11:37:14 BRST
+        - conf {params} added to make possible send data on BODY different from application/x-www-form-urlencoded
+        - a little code refactory
+        - WARNING: Class::Trigger callbacks now get 1 HAHSREF params instead of N [SCALAR|ARRAY]REF.
+            - this will make easy add more params without breaking everything!
+
 0.04  2015-01-13 09:20:36 BRST
         - decode_response added on ->new() and it's required
 
