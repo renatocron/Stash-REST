@@ -1,7 +1,7 @@
 package Stash::REST;
 use strict;
 use 5.008_005;
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use warnings;
 use utf8;
@@ -195,7 +195,7 @@ sub _rest_request {
           Content        => [ ( $data && ref $data eq 'ARRAY' ? @$data : () ), %{ $conf{files} } ];
     }
 
-    $self->call_trigger( 'process_request', \$req, \%conf );
+    $self->call_trigger( 'process_request', { req => $req, conf => \%conf } );
 
     # change to correct method.
     $req->method( $conf{method} );
@@ -203,7 +203,7 @@ sub _rest_request {
     my $res = eval { $self->do_request()->($req) };
     confess "request died: $@" if $@;
 
-    $self->call_trigger( 'process_response', \$req, \$res, \%conf );
+    $self->call_trigger( 'process_response', { req => $req, res => $res, conf => \%conf } );
 
     #is( $res->code, $code, $name . ' status code is ' . $code );
     confess 'response expected fail and it is successed' if $is_fail  && $res->is_success;
@@ -211,7 +211,7 @@ sub _rest_request {
 
     confess 'response code [', $res->code, '] diverge expected [', $code, ']' if $code != $res->code;
 
-    $self->call_trigger( 'process_response_success', \$req, \$res, \%conf );
+    $self->call_trigger( 'process_response_success', { req => $req, res => $res, conf => \%conf } );
 
     return '' if $code == 204;
     return $res if exists $conf{method} && $conf{method} eq 'HEAD';
@@ -219,7 +219,7 @@ sub _rest_request {
     my $obj = eval { $self->decode_response()->($res) };
     confess("decode_response failed: $@") if $@;
 
-    $self->call_trigger( 'response_decoded', \$req, \$res, \$obj, \%conf );
+    $self->call_trigger( 'response_decoded', { req => $req, res => $res, decoded => $obj, conf => \%conf } );
 
     if ($stashkey) {
         $self->stash->{$stashkey} = $obj;
@@ -236,13 +236,13 @@ sub _rest_request {
 
                 $self->rest_reload($stashkey);
 
-                $self->call_trigger( 'item_loaded', $stashkey, \%conf );
+                $self->call_trigger( 'item_loaded', { stash => $stashkey, conf => \%conf } );
             }
             else {
                 confess 'requests with response code 201 should contain header Location';
             }
 
-            $self->call_trigger( 'stash_added', $stashkey, \%conf );
+            $self->call_trigger( 'stash_added', { stash => $stashkey, conf => \%conf } );
         }
     }
 
@@ -252,7 +252,7 @@ sub _rest_request {
 
         $self->rest_reload_list($stashkey);
 
-        $self->call_trigger( 'list_loaded', $stashkey, \%conf );
+        $self->call_trigger( 'list_loaded', { stash => $stashkey, conf => \%conf } );
 
     }
 
@@ -285,27 +285,27 @@ sub rest_reload {
     $req->method('GET');
     $prepare_request->($req) if $prepare_request;
 
-    $self->call_trigger( 'process_request', \$req, \%conf );
+    $self->call_trigger( 'process_request', { req => $req, conf => \%conf } );
     my $res = $self->do_request()->($req);
 
-    $self->call_trigger( 'process_response', \$req, \$res, \%conf );
+    $self->call_trigger( 'process_response', { req => $req, res => $res, conf => \%conf } );
 
     confess 'request code diverge expected' if $code != $res->code;
 
-    $self->call_trigger( 'process_response_success', \$req, \$res, \%conf );
+    $self->call_trigger( 'process_response_success', { req => $req, res => $res, conf => \%conf } );
 
     my $obj;
     if ( $res->code == 200 ) {
         my $obj = eval { $self->decode_response()->($res) };
         confess("decode_response failed: $@") if $@;
 
-        $self->call_trigger( 'response_decoded', \$req, \$res, \$obj, \%conf );
+        $self->call_trigger( 'response_decoded', { req => $req, res => $res, decoded => $obj, conf => \%conf } );
 
         $self->stash( $stashkey . '.get' => $obj );
     }
     elsif ( $res->code == 404 ) {
 
-        $self->call_trigger( 'stash_removed', $stashkey, \%conf );
+        $self->call_trigger( 'stash_removed', { stash => $stashkey, conf => \%conf } );
 
         # $self->stash->{ $stashkey . '.get' };
         delete $self->stash->{ $stashkey . '.id' };
@@ -345,22 +345,22 @@ sub rest_reload_list {
     $req->method('GET');
     $prepare_request->($req) if $prepare_request;
 
-    $self->call_trigger( 'process_request', \$req, \%conf );
+    $self->call_trigger( 'process_request', { req => $req, conf => \%conf } );
 
     my $res = $self->do_request()->($req);
 
-    $self->call_trigger( 'process_response', \$req, \$res, \%conf );
+    $self->call_trigger( 'process_response', { req => $req, res => $res, conf => \%conf } );
 
     confess 'request code diverge expected' if $code != $res->code;
 
-    $self->call_trigger( 'process_response_success', \$req, \$res, \%conf );
+    $self->call_trigger( 'process_response_success', { req => $req, res => $res, conf => \%conf } );
 
     my $obj;
     if ( $res->code == 200 ) {
         my $obj = eval { $self->decode_response()->($res) };
         confess("decode_response failed: $@") if $@;
 
-        $self->call_trigger( 'response_decoded', \$req, \$res, \$obj, \%conf );
+        $self->call_trigger( 'response_decoded', { req => $req, res => $res, decoded => $obj, conf => \%conf } );
 
         $self->stash( $stashkey . '.list' => $obj );
     }
@@ -374,11 +374,11 @@ sub rest_reload_list {
 sub stash_ctx {
     my ( $self, $staname, $sub ) = @_;
 
-    $self->call_trigger( 'before_stash_ctx', $staname );
+    $self->call_trigger( 'before_stash_ctx', { stash => $staname } );
 
     my @ret = $sub->( $self->stash->{$staname} );
 
-    $self->call_trigger( 'after_stash_ctx', $staname, \@ret );
+    $self->call_trigger( 'after_stash_ctx', { stash => $staname, results => \@ret } );
     return @ret;
 }
 
@@ -527,66 +527,63 @@ extensions and analysis by other modules, using the callbacks L<Class::Trigger>.
 
 =head2 rest_get
 
-Same as:
+Similar to:
 
     $self->rest_post(
         $url,
         code => 200,
         %conf,
-        method => 'GET',
-        $data
+        method => 'GET'
     );
 
 =head2 rest_put
 
-Same as:
+Similar to:
 
     $self->rest_post(
         $url,
         code => ( exists $conf{is_fail} ? 400 : 202 ),
         %conf,
         method => 'PUT',
-        $data
     );
 
 =head2 rest_head
 
-Same as:
+Similar to:
 
     $self->rest_post(
         $url,
         code => 200,
         %conf,
         method => 'HEAD',
-        $data
     );
 
 =head2 rest_delete
 
-Same as:
+Similar to:
 
     $self->rest_post(
         $url,
         code => 204,
         %conf,
-        method => 'DELETE',
-        $data
+        method => 'DELETE'
     );
 
 =head2 _capture_args
 
 This is a private method. It parse and validate params for rest_post and above methods.
 
-    my ($self, $url, $data, %conf) = &_capture_args(@_);
+    my ($self, $url, %conf) = &_capture_args(@_);
 
     So, @_ must have a items like this:
 
         $self, # (required) self object
         $url,  # (required) a string. If ARRAY $url will return a join '/', @$url
         %conf, # (optional) configuration hash (AKA list). Odd number will cause problems.
-        $data  # (optional) ArrayRef, send on body as application/x-www-form-urlencoded data
+        $data  # (optional) ArrayRef, send on body as application/x-www-form-urlencoded data on POST | PUT
 
-    # $data can be also sent as $conf{data} = []
+    # $data can be also sent as $conf{data} = [ ... ]
+
 
 =head2 rest_post
 
@@ -613,6 +610,50 @@ Load parsed response on C< $obj->stash->{foobar} > and some others fields
 C< $obj->stash->{foobar.id} > if response code is 201 and parsed response contains ->{id}
 C< $obj->stash->{foobar.url} > if response code is 201 and header contains Location (confess if missed)
 
+=head4 params => []
+
+Add query params to URI
+
+    $obj->rest_post(
+        '/foo?you_can_put_here=1',
+        list  => 1,
+        stash => 'easyname',
+        params => [ and_continue_with_other_params => 'here' ],
+        data => [ data_here_are_sent_on_body => '1' ]
+    );
+
+=head4 headers => [],
+
+Add headers on the main request.
+
+You can use this to modify the default HTTP::Request::Common header for $data
+
+    # POST body with JSON:
+    $obj->rest_post(
+        '/post-with-params?api_key=1',
+        stash   => 'testparams',
+        code => 200,
+        params  => [ another_key => 2 ],
+        headers => [
+            'Content-Type' => 'application/json',
+        ],
+        data => encode_json( { hello => 'json' } ),
+    );
+
+=head4 prepare_request => sub {}
+
+Modify secondary requests like GET /foo or GET Location after a POST /foo
+
+    $obj->rest_post(
+        '/foo',
+        list  => 1,
+        stash => 'easyname',
+        prepare_request => sub {
+            is(ref $_[0], 'HTTP::Request', 'HTTP::Request recived on prepare_request');
+            $run++;
+        },
+        data => [ name => 'foo' ]
+    );
 
 =head4 list => 1,
 
@@ -667,17 +708,42 @@ passing arguments. Unlike catalyst, it's never cleared, so, it lasts until objec
 I'm always trying to improve those numbers.
 Improve branch number is a very time-consuming task. There is a room for test all checking and defaults on tests.
 
-
+    @ version 0.05
     ---------------------------- ------ ------ ------ ------ ------ ------ ------
     File                           stmt   bran   cond    sub    pod   time  total
     ---------------------------- ------ ------ ------ ------ ------ ------ ------
-    blib/lib/Stash/REST.pm         94.9   73.1   81.4  100.0    0.0  100.0   84.6
-    Total                          94.9   73.1   81.4  100.0    0.0  100.0   84.6
+    blib/lib/Stash/REST.pm         96.4   74.5   68.4  100.0  100.0  100.0   86.7
+    Total                          96.4   74.5   68.4  100.0  100.0  100.0   86.7
     ---------------------------- ------ ------ ------ ------ ------ ------ ------
+
 
 =head1 Class::Trigger names
 
-Updated @ Stash-REST 0.04
+
+Updated @ Stash-REST 0.05
+
+    $ grep  '$self0_05->call_trigger' lib/Stash/REST.pm  | perl -ne '$_ =~ s/^\s+//; $_ =~ s/self-/self0_04-/; print' | sort | uniq
+
+Trigger / variables:
+
+    $self0_05->call_trigger( 'after_stash_ctx', { stash => $staname, results => \@ret });
+    $self0_05->call_trigger( 'before_rest_delete', { url => $url, conf => \%conf } );
+    $self0_05->call_trigger( 'before_rest_get', { url => $url, conf => \%conf } );
+    $self0_05->call_trigger( 'before_rest_head', { url => $url, conf => \%conf } );
+    $self0_05->call_trigger( 'before_rest_post', { url => $url, conf => \%conf } );
+    $self0_05->call_trigger( 'before_rest_put', { url => $url, conf => \%conf } );
+    $self0_05->call_trigger( 'before_stash_ctx', { stash => $staname } );
+    $self0_05->call_trigger( 'item_loaded', { stash => $stashkey, conf => \%conf });
+    $self0_05->call_trigger( 'list_loaded', { stash => $stashkey, conf => \%conf } );
+    $self0_05->call_trigger( 'process_request', {req => $req, conf => \%conf} );
+    $self0_05->call_trigger( 'process_response', {req => $req, res => $res, conf => \%conf} );
+    $self0_05->call_trigger( 'process_response_success', {req => $req, res => $res, conf => \%conf} );
+    $self0_05->call_trigger( 'response_decoded', {req => $req, res => $res, decoded => $obj, conf => \%conf} );
+    $self0_05->call_trigger( 'stash_added', { stash => $stashkey, conf => \%conf } );
+    $self0_05->call_trigger( 'stash_removed', { stash => $stashkey, conf => \%conf } );
+
+
+Updated @ Stash-REST 0.04 *** PLEASE UPGRADE TO NEW VERSION ***
 
     $ grep  '$self->call_trigger' lib/Stash/REST.pm  | perl -ne '$_ =~ s/^\s+//; $_ =~ s/self-/self0_04-/; print' | sort | uniq
 
@@ -700,26 +766,7 @@ Updated @ Stash-REST 0.04
     $self0_04->call_trigger('stash_removed', $stashkey, \%conf);
 
 
-Updated @ Stash-REST 0.03
 
-    $ grep  '$self->call_trigger' lib/Stash/REST.pm  | perl -ne '$_ =~ s/^\s+//; $_ =~ s/self-/self0_03-/; print' | sort | uniq
-
-    Trigger / variables:
-
-    $self0_03->call_trigger('after_stash_ctx', $staname, \@ret);
-    $self0_03->call_trigger('before_rest_delete', \$url, \$data, \%conf);
-    $self0_03->call_trigger('before_rest_get', \$url, \$data, \%conf);
-    $self0_03->call_trigger('before_rest_head', \$url, \$data, \%conf);
-    $self0_03->call_trigger('before_rest_post', \$url, \$data, \%conf);
-    $self0_03->call_trigger('before_rest_put', \$url, \$data, \%conf);
-    $self0_03->call_trigger('before_stash_ctx', $staname);
-    $self0_03->call_trigger('item_loaded', $stashkey, \%conf);
-    $self0_03->call_trigger('list_loaded', $stashkey, \%conf);
-    $self0_03->call_trigger('process_request', \$req, \%conf);
-    $self0_03->call_trigger('process_response', \$req, \$res, \%conf);
-    $self0_03->call_trigger('response_decoded', \$req, \$res, \$obj, \%conf);
-    $self0_03->call_trigger('stash_added', $stashkey, \%conf);
-    $self0_03->call_trigger('stash_removed', $stashkey, \%conf);
 
 
 
