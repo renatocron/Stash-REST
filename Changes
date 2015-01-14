@@ -2,6 +2,9 @@ Revision history for Stash-REST
 
 {{$NEXT}}
 
+0.052  2015-01-14 11:48:35 BRST
+        - NOT POST or PUT should transforms data into params, even if params is an empty arrayref
+
 0.05  2015-01-14 11:37:14 BRST
         - conf {params} added to make possible send data on BODY different from application/x-www-form-urlencoded
         - a little code refactory
