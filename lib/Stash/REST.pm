@@ -605,10 +605,10 @@ This test if $res->code equivalent to expected. Die with confess if not archived
 
 =head4 stash => 'foobar'
 
-Load parsed response on C< $obj->stash->{foobar} > and some others fields
+Load parsed response on C< $obj-E<gt>stash-E<gt>{foobar} > and some others fields
 
-C< $obj->stash->{foobar.id} > if response code is 201 and parsed response contains ->{id}
-C< $obj->stash->{foobar.url} > if response code is 201 and header contains Location (confess if missed)
+C< $obj-E<gt>stash-E<gt>{foobar.id} > if response code is 201 and parsed response contains ->{id}
+C< $obj-E<gt>stash-E<gt>{foobar.url} > if response code is 201 and header contains Location (confess if missed)
 
 =head4 params => []
 
@@ -657,8 +657,10 @@ Modify secondary requests like GET /foo or GET Location after a POST /foo
 
 =head4 list => 1,
 
-If true, Location header will be looked and a GET on Location will occur and parsed data will be stashed on
-C< $obj->stash->{foobar.list} > and list-url on C< $obj->stash->{foobar.list-url} >
+If true, a GET on the same $url will occur and parsed data will be stashed on
+C< $obj-E<gt>stash-E<gt>{foobar.list} > and list-url on C< $obj-E<gt>stash-E<gt>{foobar.list-url} >
+
+This is recomended if you are creating something with rest_post and want a list.
 
 =head2 stash_ctx
 
