@@ -53,6 +53,7 @@
             "LWP::UserAgent" : "0",
             "Test::Fake::HTTPD" : "0",
             "Test::More" : "0.96",
+            "Test::Pod" : "0",
             "URL::Encode" : "0.03"
          }
       }
@@ -69,7 +70,7 @@
          "web" : "https://github.com/renatocron/Stash-REST"
       }
    },
-   "version" : "0.056",
+   "version" : "0.058",
    "x_contributors" : [
       "Renato CRON <renato.cron@gmail.com>"
    ]

@@ -1,7 +1,7 @@
 package Stash::REST;
 use strict;
 use 5.008_005;
-our $VERSION = '0.056';
+our $VERSION = '0.058';
 
 use warnings;
 use utf8;
@@ -206,10 +206,12 @@ sub _rest_request {
     $self->call_trigger( 'process_response', { req => $req, res => $res, conf => \%conf } );
 
     #is( $res->code, $code, $name . ' status code is ' . $code );
-    confess 'response expected fail and it is successed' if $is_fail  && $res->is_success;
-    confess 'response expected success and it is failed' if !$is_fail && !$res->is_success;
+    if (!exists $conf{skip_response_tests}){
+        confess 'response expected fail and it is successed' if $is_fail  && $res->is_success;
+        confess 'response expected success and it is failed' if !$is_fail && !$res->is_success;
 
-    confess 'response code [', $res->code, '] diverge expected [', $code, ']' if $code != $res->code;
+        confess 'response code [', $res->code, '] diverge expected [', $code, ']' if $code != $res->code;
+    }
 
     $self->call_trigger( 'process_response_success', { req => $req, res => $res, conf => \%conf } );
 
@@ -406,7 +408,8 @@ Stash::REST - Add Requests into stash. Then, Extends with Class::Trigger!
             return $res;
 
             # in case of using LWP
-            $req->uri( 'http://your-api.com' );
+            $req->uri($req->uri->abs( 'http://your-api.com' ));
+
             return LWP::UserAgent->new->request($req);
 
         },

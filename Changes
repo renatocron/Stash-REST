@@ -1,6 +1,7 @@
 Revision history for Stash-REST
 
 {{$NEXT}}
+        - option skip_response_tests added to skip code and is_fail verification.
 
 0.056  2015-01-14 21:24:26 BRST
         - Remove wrong but harmless "ARRAY[XXXXXX]: " header on rest_reload and rest_reload_list... my fault!

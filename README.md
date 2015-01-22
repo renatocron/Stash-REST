@@ -17,7 +17,8 @@ Stash::REST - Add Requests into stash. Then, Extends with Class::Trigger!
             return $res;
 
             # in case of using LWP
-            $req->uri( 'http://your-api.com' );
+            $req->uri($req->uri->abs( 'http://your-api.com' ));
+
             return LWP::UserAgent->new->request($req);
 
         },

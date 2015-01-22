@@ -8,7 +8,6 @@ requires 'Class::Trigger', '0.14';
 requires 'namespace::clean';
 
 on test => sub {
-
     requires 'JSON', '2.34';
     requires 'Test::More', '0.96';
 
@@ -16,4 +15,5 @@ on test => sub {
     requires 'Test::Fake::HTTPD';
     requires 'LWP::UserAgent';
     requires 'URL::Encode', '0.03';
+    requires 'Test::Pod';
 };
