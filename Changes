@@ -1,6 +1,8 @@
 Revision history for Stash-REST
 
 {{$NEXT}}
+
+0.06  2015-02-05 17:58:02 BRST
         - Fix bug on params options. When it had more than one key, it was turn next keys values of the first.
         - Now params accept HASHREF or ARRAYREF.
 
