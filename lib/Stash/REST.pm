@@ -170,7 +170,12 @@ sub _rest_request {
     $conf{code} = $code;
 
     my $uri = URI->new($url);
-    $uri->query_param_append( @{ $conf{params} } ) if $conf{params};
+    if ($conf{params}){
+        my @old = ref $conf{params} eq 'ARRAY' ? @{ $conf{params} } : %{ $conf{params} };
+        while (my($k, $v) = splice(@old, 0, 2)) {
+            $uri->query_param_append( $k, $v );
+        }
+    }
     $url = $uri->as_string;
 
     my $stashkey = exists $conf{stash} ? $conf{stash} : undef;
