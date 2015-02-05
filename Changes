@@ -1,6 +1,8 @@
 Revision history for Stash-REST
 
 {{$NEXT}}
+        - Fix bug on params options. When it had more than one key, it was turn next keys values of the first.
+        - Now params accept HASHREF or ARRAYREF.
 
 0.058  2015-01-22 16:27:37 BRST
         - option skip_response_tests added to skip code and is_fail verification.
