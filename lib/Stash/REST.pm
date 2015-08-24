@@ -84,7 +84,7 @@ sub _capture_args {
     confess "Can't use ->{files} helper with custom Content-Type."
       if exists $conf{files} && ( exists $conf{headers} && grep { 'Content-Type' } @{ $conf{headers} } );
 
-    my $can_have_body = $method =~ /POST|PUT/;
+    my $can_have_body = $method =~ /POST|PUT|DELETE/;
 
     if ( !$can_have_body && $data && ref $data eq 'ARRAY' ) {
         confess "$method can't have {data}. Please, use only {params} instead" if ( exists $conf{params} );
