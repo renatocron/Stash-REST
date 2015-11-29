@@ -267,6 +267,22 @@ Modify secondary requests like GET /foo or GET Location after a POST /foo
 If true, Location header will be looked and a GET on Location will occur and parsed data will be stashed on
 ` $obj-`stash->{foobar.list} > and list-url on ` $obj-`stash->{foobar.list-url} >
 
+#### skip\_response\_tests => 1,
+
+If true, automatic load of Location on 201 will not be executed.
+
+#### callbacks
+
+    process_request
+    process_response
+    process_response_success
+    response_decoded
+    item_loaded
+    stash_added
+    list_loaded
+
+Can be used in addition to the Class::Trigger in a one-execution callback.
+
 ## stash\_ctx
 
     $obj->stash_ctx(

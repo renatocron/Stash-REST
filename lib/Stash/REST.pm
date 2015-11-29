@@ -202,7 +202,7 @@ sub _rest_request {
           Content        => [ ( $data && ref $data eq 'ARRAY' ? @$data : () ), %{ $conf{files} } ];
     }
 
-    $conf->{process_request}->( { req => $req, conf => \%conf } )
+    $conf{process_request}->( { req => $req, conf => \%conf } )
       if ( exists $conf{process_request} && ref $conf{process_request} eq 'CODE' );
 
     $self->call_trigger( 'process_request', { req => $req, conf => \%conf } );
@@ -213,7 +213,7 @@ sub _rest_request {
     my $res = eval { $self->do_request()->($req) };
     confess "request died: $@" if $@;
 
-    $conf->{process_response}->( { req => $req, res => $res, conf => \%conf } )
+    $conf{process_response}->( { req => $req, res => $res, conf => \%conf } )
       if ( exists $conf{process_response} && ref $conf{process_response} eq 'CODE' );
 
     $self->call_trigger( 'process_response', { req => $req, res => $res, conf => \%conf } );
@@ -226,7 +226,7 @@ sub _rest_request {
         confess 'response code [', $res->code, '] diverge expected [', $code, ']' if $code != $res->code;
     }
 
-    $conf->{process_response_success}->( { req => $req, res => $res, conf => \%conf } )
+    $conf{process_response_success}->( { req => $req, res => $res, conf => \%conf } )
       if ( exists $conf{process_response_success} && ref $conf{process_response_success} eq 'CODE' );
 
     $self->call_trigger( 'process_response_success', { req => $req, res => $res, conf => \%conf } );
@@ -237,7 +237,7 @@ sub _rest_request {
     my $obj = eval { $self->decode_response()->($res) };
     confess("decode_response failed: $@") if $@;
 
-    $conf->{response_decoded}->( { req => $req, res => $res, decoded => $obj, conf => \%conf } )
+    $conf{response_decoded}->( { req => $req, res => $res, decoded => $obj, conf => \%conf } )
       if ( exists $conf{response_decoded} && ref $conf{response_decoded} eq 'CODE' );
 
     $self->call_trigger( 'response_decoded', { req => $req, res => $res, decoded => $obj, conf => \%conf } );
@@ -257,7 +257,7 @@ sub _rest_request {
 
                 $self->rest_reload($stashkey);
 
-                $conf->{item_loaded}->( { stash => $stashkey, conf => \%conf } )
+                $conf{item_loaded}->( { stash => $stashkey, conf => \%conf } )
                   if ( exists $conf{item_loaded} && ref $conf{item_loaded} eq 'CODE' );
 
                 $self->call_trigger( 'item_loaded', { stash => $stashkey, conf => \%conf } );
@@ -266,7 +266,7 @@ sub _rest_request {
                 confess 'requests with response code 201 should contain header Location';
             }
 
-            $conf->{stash_added}->( { stash => $stashkey, conf => \%conf } )
+            $conf{stash_added}->( { stash => $stashkey, conf => \%conf } )
               if ( exists $conf{stash_added} && ref $conf{stash_added} eq 'CODE' );
             $self->call_trigger( 'stash_added', { stash => $stashkey, conf => \%conf } );
         }
@@ -278,7 +278,7 @@ sub _rest_request {
 
         $self->rest_reload_list($stashkey);
 
-        $conf->{list_loaded}->( { stash => $stashkey, conf => \%conf } )
+        $conf{list_loaded}->( { stash => $stashkey, conf => \%conf } )
           if ( exists $conf{list_loaded} && ref $conf{list_loaded} eq 'CODE' );
 
         $self->call_trigger( 'list_loaded', { stash => $stashkey, conf => \%conf } );
