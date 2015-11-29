@@ -1,6 +1,8 @@
 Revision history for Stash-REST
 
 {{$NEXT}}
+
+0.08  2015-11-29 15:00:40 BRST
     - added options to pass automatic_load_item => 0 for not loading item when POST returns 201 with Location.
     - process_request, process_response, process_response_success, response_decoded,
       item_loaded    , stash_added   and list_loaded now can be an option for rest_* in addition to the Class::Trigger
