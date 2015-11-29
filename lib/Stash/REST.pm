@@ -163,6 +163,8 @@ sub _rest_request {
 
     my $data = exists $conf{data} ? $conf{data} : undef;
 
+    $conf{automatic_load_item} = 1 unless exists $conf{automatic_load_item};
+
     my $is_fail = exists $conf{is_fail} && $conf{is_fail};
 
     my $code = $conf{code};
@@ -170,9 +172,9 @@ sub _rest_request {
     $conf{code} = $code;
 
     my $uri = URI->new($url);
-    if ($conf{params}){
+    if ( $conf{params} ) {
         my @old = ref $conf{params} eq 'ARRAY' ? @{ $conf{params} } : %{ $conf{params} };
-        while (my($k, $v) = splice(@old, 0, 2)) {
+        while ( my ( $k, $v ) = splice( @old, 0, 2 ) ) {
             $uri->query_param_append( $k, $v );
         }
     }
@@ -200,6 +202,9 @@ sub _rest_request {
           Content        => [ ( $data && ref $data eq 'ARRAY' ? @$data : () ), %{ $conf{files} } ];
     }
 
+    $conf->{process_request}->( { req => $req, conf => \%conf } )
+      if ( exists $conf{process_request} && ref $conf{process_request} eq 'CODE' );
+
     $self->call_trigger( 'process_request', { req => $req, conf => \%conf } );
 
     # change to correct method.
@@ -208,15 +213,21 @@ sub _rest_request {
     my $res = eval { $self->do_request()->($req) };
     confess "request died: $@" if $@;
 
+    $conf->{process_response}->( { req => $req, res => $res, conf => \%conf } )
+      if ( exists $conf{process_response} && ref $conf{process_response} eq 'CODE' );
+
     $self->call_trigger( 'process_response', { req => $req, res => $res, conf => \%conf } );
 
     #is( $res->code, $code, $name . ' status code is ' . $code );
-    if (!exists $conf{skip_response_tests}){
+    if ( !exists $conf{skip_response_tests} ) {
         confess 'response expected fail and it is successed' if $is_fail  && $res->is_success;
         confess 'response expected success and it is failed' if !$is_fail && !$res->is_success;
 
         confess 'response code [', $res->code, '] diverge expected [', $code, ']' if $code != $res->code;
     }
+
+    $conf->{process_response_success}->( { req => $req, res => $res, conf => \%conf } )
+      if ( exists $conf{process_response_success} && ref $conf{process_response_success} eq 'CODE' );
 
     $self->call_trigger( 'process_response_success', { req => $req, res => $res, conf => \%conf } );
 
@@ -225,6 +236,9 @@ sub _rest_request {
 
     my $obj = eval { $self->decode_response()->($res) };
     confess("decode_response failed: $@") if $@;
+
+    $conf->{response_decoded}->( { req => $req, res => $res, decoded => $obj, conf => \%conf } )
+      if ( exists $conf{response_decoded} && ref $conf{response_decoded} eq 'CODE' );
 
     $self->call_trigger( 'response_decoded', { req => $req, res => $res, decoded => $obj, conf => \%conf } );
 
@@ -238,10 +252,13 @@ sub _rest_request {
 
             my $item_url = $res->header('Location');
 
-            if ($item_url) {
+            if ( $item_url && $conf{automatic_load_item} ) {
                 $self->stash->{ $stashkey . '.url' } = $item_url;
 
                 $self->rest_reload($stashkey);
+
+                $conf->{item_loaded}->( { stash => $stashkey, conf => \%conf } )
+                  if ( exists $conf{item_loaded} && ref $conf{item_loaded} eq 'CODE' );
 
                 $self->call_trigger( 'item_loaded', { stash => $stashkey, conf => \%conf } );
             }
@@ -249,6 +266,8 @@ sub _rest_request {
                 confess 'requests with response code 201 should contain header Location';
             }
 
+            $conf->{stash_added}->( { stash => $stashkey, conf => \%conf } )
+              if ( exists $conf{stash_added} && ref $conf{stash_added} eq 'CODE' );
             $self->call_trigger( 'stash_added', { stash => $stashkey, conf => \%conf } );
         }
     }
@@ -258,6 +277,9 @@ sub _rest_request {
         $self->stash( $stashkey . '.list-url' => $url );
 
         $self->rest_reload_list($stashkey);
+
+        $conf->{list_loaded}->( { stash => $stashkey, conf => \%conf } )
+          if ( exists $conf{list_loaded} && ref $conf{list_loaded} eq 'CODE' );
 
         $self->call_trigger( 'list_loaded', { stash => $stashkey, conf => \%conf } );
 
@@ -666,6 +688,23 @@ Modify secondary requests like GET /foo or GET Location after a POST /foo
 
 If true, Location header will be looked and a GET on Location will occur and parsed data will be stashed on
 C< $obj->stash->{foobar.list} > and list-url on C< $obj->stash->{foobar.list-url} >
+
+=head4 skip_response_tests => 1,
+
+If true, automatic load of Location on 201 will not be executed.
+
+
+=head4 callbacks
+
+    process_request
+    process_response
+    process_response_success
+    response_decoded
+    item_loaded
+    stash_added
+    list_loaded
+
+Can be used in addition to the Class::Trigger in a one-execution callback.
 
 =head2 stash_ctx
 
