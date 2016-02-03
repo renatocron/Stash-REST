@@ -387,7 +387,7 @@ Updated @ Stash-REST 0.04 \*\*\* PLEASE UPGRADE TO NEW VERSION \*\*\*
 
 # AUTHOR
 
-Renato CRON <rentocron@cpan.org>
+Renato CRON &lt;rentocron@cpan.org>
 
 # COPYRIGHT
 

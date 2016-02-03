@@ -1,7 +1,7 @@
 package Stash::REST;
 use strict;
 use 5.008_005;
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use warnings;
 use utf8;

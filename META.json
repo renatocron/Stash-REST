@@ -4,7 +4,7 @@
       "Renato CRON <rentocron@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 5.039, Dist::Milla version v1.0.15, CPAN::Meta::Converter version 2.150005",
+   "generated_by" : "Dist::Zilla version 5.043, Dist::Milla version v1.0.15, CPAN::Meta::Converter version 2.150005",
    "license" : [
       "perl_5"
    ],
@@ -15,18 +15,18 @@
    "name" : "Stash-REST",
    "no_index" : {
       "directory" : [
-         "t",
-         "xt",
+         "eg",
+         "examples",
          "inc",
          "share",
-         "eg",
-         "examples"
+         "t",
+         "xt"
       ]
    },
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "Module::Build::Tiny" : "0.039"
+            "Module::Build::Tiny" : "0.034"
          }
       },
       "develop" : {
@@ -70,10 +70,9 @@
          "web" : "https://github.com/renatocron/Stash-REST"
       }
    },
-   "version" : "0.08",
+   "version" : "0.09",
    "x_contributors" : [
-      "Renato CRON <renato.cron@gmail.com>",
-      "RenatoCRON <renato.cron@gmail.com>"
+      "Renato CRON <renato.cron@gmail.com>"
    ]
 }
 
