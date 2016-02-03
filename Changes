@@ -1,6 +1,9 @@
 Revision history for Stash-REST
 
 {{$NEXT}}
+    - TWO BUGS FIXED! MISSING TESTS AGAIN
+    - Fix automatic_load_item => 0 # the if was working, but the else worked too!
+    - Fix 2 greps. Used '"' when '/' was needed. Always returned true!
 
 0.08  2015-11-29 15:00:40 BRST
     - added options to pass automatic_load_item => 0 for not loading item when POST returns 201 with Location.

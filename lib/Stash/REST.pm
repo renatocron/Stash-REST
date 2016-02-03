@@ -78,11 +78,13 @@ sub _capture_args {
         %conf = @params;
     }
 
+    $conf{headers} = [ %{$conf{headers}} ] if exists $conf{headers} && ref $conf{headers} eq 'HASH';
+
     confess 'param $data should be an array ref'
-      if ref $data ne 'ARRAY' && ( exists $conf{headers} && !grep { 'Content-Type' } @{ $conf{headers} } );
+      if ref $data ne 'ARRAY' && ( exists $conf{headers} && !grep { /Content-Type/i } @{ $conf{headers} } );
 
     confess "Can't use ->{files} helper with custom Content-Type."
-      if exists $conf{files} && ( exists $conf{headers} && grep { 'Content-Type' } @{ $conf{headers} } );
+      if exists $conf{files} && ( exists $conf{headers} && grep { /Content-Type/i } @{ $conf{headers} } );
 
     my $can_have_body = $method =~ /POST|PUT|DELETE/;
 
@@ -262,7 +264,7 @@ sub _rest_request {
 
                 $self->call_trigger( 'item_loaded', { stash => $stashkey, conf => \%conf } );
             }
-            else {
+            elsif($conf{automatic_load_item}) {
                 confess 'requests with response code 201 should contain header Location';
             }
 
