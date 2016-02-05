@@ -78,24 +78,24 @@ sub _capture_args {
         %conf = @params;
     }
 
-    $conf{headers} = [ %{$conf{headers}} ] if exists $conf{headers} && ref $conf{headers} eq 'HASH';
-
-    confess 'param $data should be an array ref'
-      if ref $data ne 'ARRAY' && ( exists $conf{headers} && !grep { /Content-Type/i } @{ $conf{headers} } );
+    $conf{headers} = [ %{ $conf{headers} } ] if exists $conf{headers} && ref $conf{headers} eq 'HASH';
 
     confess "Can't use ->{files} helper with custom Content-Type."
       if exists $conf{files} && ( exists $conf{headers} && grep { /Content-Type/i } @{ $conf{headers} } );
 
     my $can_have_body = $method =~ /POST|PUT|DELETE/;
 
-    if ( !$can_have_body && $data && ref $data eq 'ARRAY' ) {
-        confess "$method can't have {data}. Please, use only {params} instead" if ( exists $conf{params} );
-
+    if ( !$can_have_body && $data && exists $conf{params} ) {
+        confess "You are using {data} and {params} in $method. Please, use only {params} instead"
+          unless $conf{allow_get_with_body};
+        $conf{data} = $data;
+    }
+    elsif ( !$can_have_body && $data && !exists $conf{params} ) {
         $conf{params} = $data;
-
     }
     elsif ( !$can_have_body && $data ) {
-        cluck "$method does not allow body. You may have problems with proxy. Consider removing it";
+        confess "$method does not allow body. You may have problems with proxy. Consider removing it"
+          unless $conf{allow_get_with_body};
         $conf{data} = $data;
     }
     else {
@@ -264,7 +264,7 @@ sub _rest_request {
 
                 $self->call_trigger( 'item_loaded', { stash => $stashkey, conf => \%conf } );
             }
-            elsif($conf{automatic_load_item}) {
+            elsif ( $conf{automatic_load_item} ) {
                 confess 'requests with response code 201 should contain header Location';
             }
 
