@@ -1,6 +1,8 @@
 Revision history for Stash-REST
 
 {{$NEXT}}
+    - Fixed one bug created with last version!
+    - Added allow_get_with_body to allow GET/HEAD to have body and params if you want to.
 
 0.09  2016-02-03 17:21:02 BRST
     - TWO BUGS FIXED! MISSING TESTS AGAIN
