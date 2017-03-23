@@ -361,7 +361,7 @@ $obj->stash_ctx(
 unlink($filename);
 
 eval { $obj->rest_get( '/obs', params => [ name => 'bar' ], data => [ name => 'foo', ] ); };
-like( $@, qr|Please, use only {params} instead|, 'Please, use only {params} instead' );
+like( $@, qr|Please, use only \{params\} instead|, 'Please, use only {params} instead' );
 
 $obj->rest_get(
     '/get-params',
