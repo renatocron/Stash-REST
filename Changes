@@ -1,6 +1,7 @@
 Revision history for Stash-REST
 
 {{$NEXT}}
+    - Fixed: Unescaped left brace in regex is illegal in regex Issue #2
 
 0.10  2016-02-05 09:40:10 BRST
     - Fixed one bug created with last version!
